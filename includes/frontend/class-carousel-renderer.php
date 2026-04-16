@@ -78,6 +78,20 @@ final class Carousel_Renderer {
 		$is_auto     = 'auto' === $aspect;
 		$dom_id      = sprintf( 'usc-%s-%s-%s', $device, sanitize_html_class( $campaign['slug'] ), wp_generate_uuid4() );
 
+		// Replace each banner's image payload with an optimized one. The
+		// optimizer returns the same shape + webp_url / webp_srcset, or
+		// the original shape unchanged if optimization is disabled on
+		// this carousel or the host can't encode WebP.
+		foreach ( $banners as &$banner ) {
+			if ( ! empty( $banner['image_id'] ) ) {
+				$optimized = Image_Optimizer::payload_for( (int) $banner['image_id'], $settings, $device );
+				if ( $optimized ) {
+					$banner['image'] = $optimized;
+				}
+			}
+		}
+		unset( $banner );
+
 		// Preload the first image for LCP (only if we're rendering one carousel above the fold).
 		// We add a hint via <link rel="preload"> in the markup; safe even multiple times.
 		$first       = $banners[0]['image'];
@@ -131,14 +145,31 @@ final class Carousel_Renderer {
 	data-usc-config="<?php echo esc_attr( wp_json_encode( $config ) ); ?>"
 	style="<?php echo $style_attr; ?>"
 >
-	<link rel="preload" as="image" href="<?php echo esc_url( $first['url'] ); ?>"<?php
-		if ( ! empty( $first['srcset'] ) ) {
-			echo ' imagesrcset="' . esc_attr( $first['srcset'] ) . '"';
-		}
-		if ( ! empty( $first['sizes'] ) ) {
-			echo ' imagesizes="' . esc_attr( $first['sizes'] ) . '"';
-		}
-	?> />
+	<?php
+	// LCP accelerator. Emit two preloads when a WebP variant exists —
+	// browsers ignore the type they don't support, so only the right
+	// one actually fetches. imagetype="" helps Chrome skip the JPEG
+	// preload when it's going to grab the WebP from the <picture>.
+	$preload_jpeg_attrs = '';
+	if ( ! empty( $first['srcset'] ) ) {
+		$preload_jpeg_attrs .= ' imagesrcset="' . esc_attr( $first['srcset'] ) . '"';
+	}
+	if ( ! empty( $first['sizes'] ) ) {
+		$preload_jpeg_attrs .= ' imagesizes="' . esc_attr( $first['sizes'] ) . '"';
+	}
+	?>
+	<?php if ( ! empty( $first['webp_url'] ) ) : ?>
+		<link rel="preload" as="image" type="image/webp" href="<?php echo esc_url( $first['webp_url'] ); ?>"<?php
+			if ( ! empty( $first['webp_srcset'] ) ) {
+				echo ' imagesrcset="' . esc_attr( $first['webp_srcset'] ) . '"';
+			}
+			if ( ! empty( $first['sizes'] ) ) {
+				echo ' imagesizes="' . esc_attr( $first['sizes'] ) . '"';
+			}
+		?> />
+	<?php else : ?>
+		<link rel="preload" as="image" href="<?php echo esc_url( $first['url'] ); ?>"<?php echo $preload_jpeg_attrs; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> />
+	<?php endif; ?>
 
 	<div class="usc-viewport" data-usc-viewport>
 		<div class="usc-track" data-usc-track>
@@ -199,6 +230,22 @@ final class Carousel_Renderer {
 		}
 
 		$img_html = '<img class="usc-image" ' . $img_attrs . ' />';
+
+		// When the optimizer produced a WebP sibling, wrap the <img> in a
+		// <picture> and offer WebP first. Browsers that understand it use
+		// the <source>; everyone else falls back to the <img>.
+		if ( ! empty( $image['webp_url'] ) || ! empty( $image['webp_srcset'] ) ) {
+			$source_attrs = 'type="image/webp"';
+			if ( ! empty( $image['webp_srcset'] ) ) {
+				$source_attrs .= ' srcset="' . esc_attr( $image['webp_srcset'] ) . '"';
+			} elseif ( ! empty( $image['webp_url'] ) ) {
+				$source_attrs .= ' srcset="' . esc_url( $image['webp_url'] ) . '"';
+			}
+			if ( ! empty( $image['sizes'] ) ) {
+				$source_attrs .= ' sizes="' . esc_attr( $image['sizes'] ) . '"';
+			}
+			$img_html = '<picture><source ' . $source_attrs . ' />' . $img_html . '</picture>';
+		}
 
 		$inner = $img_html;
 
