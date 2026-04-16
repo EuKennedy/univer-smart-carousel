@@ -208,16 +208,22 @@ export default function App() {
 /* ---------------- helpers ---------------- */
 
 // Take a campaign as-returned from the API and shape it for the editor.
+// Banners are split by device for the tab UI; groups + the flat banner list
+// stay alongside in case GroupedBannerEditor needs them (it does).
 function reshape(c) {
 	const desktop = (c.banners || []).filter((b) => b.device === 'desktop');
 	const mobile = (c.banners || []).filter((b) => b.device === 'mobile');
 	return {
 		...c,
 		banners: { desktop, mobile },
+		groups: c.groups || [],
 	};
 }
 
-// Take editor state and serialize it for the API.
+// Save only the carousel-level metadata. Banners and groups have their
+// own granular endpoints now and are mutated eagerly by
+// GroupedBannerEditor — including them here would let a stale local
+// state stomp the server.
 function serialize(c) {
 	return {
 		name: c.name,
@@ -226,19 +232,5 @@ function serialize(c) {
 		settings: c.settings,
 		start_date: c.start_date,
 		end_date: c.end_date,
-		banners: {
-			desktop: (c.banners?.desktop || []).map(stripBanner),
-			mobile: (c.banners?.mobile || []).map(stripBanner),
-		},
-	};
-}
-
-function stripBanner(b) {
-	return {
-		image_id: b.image_id,
-		link_url: b.link_url || '',
-		link_target: b.link_target || '_self',
-		link_rel: b.link_rel || '',
-		alt_text: b.alt_text || '',
 	};
 }

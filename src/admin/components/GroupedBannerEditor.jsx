@@ -1,0 +1,477 @@
+/**
+ * Grouped banner editor.
+ *
+ * Three-level tree:
+ *   Carousel
+ *     └── Group (named, can be paused)
+ *           └── Banner (image + link, can be paused)
+ *
+ * Each group is a self-contained accordion with its own header
+ * (toggle, name, banner count, delete) and a banner list inside.
+ *
+ * Mutations are eager — clicking the toggle hits the API immediately
+ * so marketing can pause a group during a swap without juggling a
+ * "save" button. Banner edits batch into the parent CampaignEditor's
+ * save (still partial, still preserves untouched fields).
+ */
+
+import { useState } from '@wordpress/element';
+import { __, sprintf } from '@wordpress/i18n';
+import { Button, IconButton, Input, Select, Modal, toast } from './ui';
+import { pickImages } from '../lib/media';
+import { classNames } from '../lib/utils';
+import { Groups as GroupsAPI, Banners as BannersAPI } from '../lib/api';
+
+const TARGET_OPTIONS = [
+	{ value: '_self', label: __('Same tab', 'univer-smart-carousel') },
+	{ value: '_blank', label: __('New tab', 'univer-smart-carousel') },
+];
+
+export default function GroupedBannerEditor({
+	campaignId,
+	device,
+	groups,
+	banners,
+	onChange,
+}) {
+	const [collapsed, setCollapsed] = useState({}); // gid → bool
+	const [renaming, setRenaming] = useState(null); // group obj or null
+	const [draftName, setDraftName] = useState('');
+	const [confirmDeleteGroup, setConfirmDeleteGroup] = useState(null);
+	const [confirmDeleteBanner, setConfirmDeleteBanner] = useState(null);
+	const [creating, setCreating] = useState(false);
+
+	const deviceGroups = (groups || []).filter((g) => g.device === device);
+	const bannersByGroup = (groupId) =>
+		(banners || []).filter((b) => b.device === device && b.group_id === groupId);
+
+	const updateGroupLocally = (gid, patch) => {
+		onChange({
+			groups: (groups || []).map((g) => (g.id === gid ? { ...g, ...patch } : g)),
+		});
+	};
+
+	const updateBannerLocally = (bid, patch) => {
+		onChange({
+			banners: (banners || []).map((b) => (b.id === bid ? { ...b, ...patch } : b)),
+		});
+	};
+
+	const removeGroupLocally = (gid) => {
+		onChange({
+			groups: (groups || []).filter((g) => g.id !== gid),
+			banners: (banners || []).filter((b) => b.group_id !== gid),
+		});
+	};
+
+	const removeBannerLocally = (bid) => {
+		onChange({ banners: (banners || []).filter((b) => b.id !== bid) });
+	};
+
+	const onCreateGroup = async () => {
+		if (!campaignId) {
+			toast(__('Save the carousel first, then add groups.', 'univer-smart-carousel'), 'error');
+			return;
+		}
+		setCreating(true);
+		try {
+			const created = await GroupsAPI.create(campaignId, {
+				device,
+				name: __('New group', 'univer-smart-carousel'),
+			});
+			onChange({ groups: [...(groups || []), created] });
+		} catch (err) {
+			toast(err?.message || __('Failed to create group.', 'univer-smart-carousel'), 'error');
+		} finally {
+			setCreating(false);
+		}
+	};
+
+	const onToggleGroup = async (group) => {
+		const next = !group.is_active;
+		updateGroupLocally(group.id, { is_active: next }); // optimistic
+		try {
+			await GroupsAPI.update(group.id, { is_active: next });
+		} catch (err) {
+			updateGroupLocally(group.id, { is_active: group.is_active }); // rollback
+			toast(err?.message || __('Failed to toggle group.', 'univer-smart-carousel'), 'error');
+		}
+	};
+
+	const onRenameGroup = async () => {
+		if (!renaming) return;
+		const name = draftName.trim();
+		if (!name) return;
+		try {
+			const saved = await GroupsAPI.update(renaming.id, { name });
+			updateGroupLocally(renaming.id, { name: saved.name });
+			setRenaming(null);
+		} catch (err) {
+			toast(err?.message || __('Failed to rename.', 'univer-smart-carousel'), 'error');
+		}
+	};
+
+	const onDeleteGroup = async () => {
+		const target = confirmDeleteGroup;
+		if (!target) return;
+		try {
+			await GroupsAPI.remove(target.id);
+			removeGroupLocally(target.id);
+			setConfirmDeleteGroup(null);
+			toast(__('Group deleted.', 'univer-smart-carousel'), 'success');
+		} catch (err) {
+			toast(err?.message || __('Failed to delete group.', 'univer-smart-carousel'), 'error');
+		}
+	};
+
+	const onAddBannersToGroup = async (group) => {
+		try {
+			const items = await pickImages({
+				multiple: true,
+				title:
+					device === 'desktop'
+						? __('Select desktop banners', 'univer-smart-carousel')
+						: __('Select mobile banners', 'univer-smart-carousel'),
+			});
+			const created = [];
+			for (const img of items) {
+				const updatedCampaign = await GroupsAPI.addBanner(group.id, {
+					image_id: img.id,
+					alt_text: img.alt || '',
+				});
+				// addBanner returns the whole hydrated campaign — pluck the
+				// new banner(s) for this group from it.
+				const fresh = (updatedCampaign.banners || []).filter(
+					(b) => b.group_id === group.id
+				);
+				created.push(...fresh);
+			}
+			// Replace this group's banners in the parent state with the
+			// freshest server copy (covers ordering + image hydration).
+			const without = (banners || []).filter((b) => b.group_id !== group.id);
+			onChange({ banners: [...without, ...created] });
+		} catch (err) {
+			console.error(err);
+		}
+	};
+
+	const onToggleBanner = async (banner) => {
+		const next = !banner.is_active;
+		updateBannerLocally(banner.id, { is_active: next });
+		try {
+			await BannersAPI.update(banner.id, { is_active: next });
+		} catch (err) {
+			updateBannerLocally(banner.id, { is_active: banner.is_active });
+			toast(err?.message || __('Failed to toggle banner.', 'univer-smart-carousel'), 'error');
+		}
+	};
+
+	const onDeleteBanner = async () => {
+		const target = confirmDeleteBanner;
+		if (!target) return;
+		try {
+			await BannersAPI.remove(target.id);
+			removeBannerLocally(target.id);
+			setConfirmDeleteBanner(null);
+		} catch (err) {
+			toast(err?.message || __('Failed to delete banner.', 'univer-smart-carousel'), 'error');
+		}
+	};
+
+	const onUpdateBannerField = (banner, patch) => {
+		// Optimistic local + debounce-ish save: just fire-and-forget the
+		// PUT. Worst case it errors and the next action will reload.
+		updateBannerLocally(banner.id, patch);
+		BannersAPI.update(banner.id, patch).catch((err) =>
+			toast(err?.message || __('Failed to save.', 'univer-smart-carousel'), 'error')
+		);
+	};
+
+	return (
+		<div className="usc-grouped-editor">
+			<div className="usc-grouped-editor__head">
+				<div>
+					<h3 className="usc-h3">
+						{device === 'desktop'
+							? __('Desktop groups', 'univer-smart-carousel')
+							: __('Mobile groups', 'univer-smart-carousel')}
+					</h3>
+					<p className="usc-muted">
+						{__(
+							'Each group can be paused without losing its banners. Toggle the switch on the group header to hide a whole sub-campaign.',
+							'univer-smart-carousel'
+						)}
+					</p>
+				</div>
+				<Button variant="primary" onClick={onCreateGroup} loading={creating}>
+					+ {__('New group', 'univer-smart-carousel')}
+				</Button>
+			</div>
+
+			{deviceGroups.length === 0 && (
+				<div className="usc-banner-editor__empty">
+					<p>
+						{campaignId
+							? __('No groups yet — create one to start adding banners.', 'univer-smart-carousel')
+							: __('Save the carousel first, then add groups.', 'univer-smart-carousel')}
+					</p>
+				</div>
+			)}
+
+			<div className="usc-groups-list">
+				{deviceGroups.map((group) => {
+					const grpBanners = bannersByGroup(group.id);
+					const isCollapsed = !!collapsed[group.id];
+					return (
+						<div
+							key={group.id}
+							className={classNames(
+								'usc-group',
+								!group.is_active && 'is-paused',
+								isCollapsed && 'is-collapsed'
+							)}
+						>
+							<header className="usc-group__head">
+								<button
+									type="button"
+									className="usc-group__chev"
+									onClick={() =>
+										setCollapsed((s) => ({ ...s, [group.id]: !s[group.id] }))
+									}
+									aria-label={__('Toggle group', 'univer-smart-carousel')}
+								>
+									<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+										<path
+											fill="currentColor"
+											d={isCollapsed ? 'M9 18l6-6-6-6 1.41-1.41L17.83 12l-7.42 7.41z' : 'M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z'}
+										/>
+									</svg>
+								</button>
+								<label className="usc-group__toggle">
+									<input
+										type="checkbox"
+										checked={group.is_active}
+										onChange={() => onToggleGroup(group)}
+									/>
+									<span className="usc-switch__track">
+										<span className="usc-switch__thumb" />
+									</span>
+								</label>
+								<button
+									type="button"
+									className="usc-group__name"
+									onClick={() => {
+										setRenaming(group);
+										setDraftName(group.name);
+									}}
+								>
+									{group.name}
+								</button>
+								<span className="usc-group__count">
+									{sprintf(
+										/* translators: %d: number of banners */
+										__('%d banners', 'univer-smart-carousel'),
+										grpBanners.length
+									)}
+								</span>
+								<div className="usc-group__actions">
+									<Button
+										variant="secondary"
+										size="sm"
+										onClick={() => onAddBannersToGroup(group)}
+									>
+										+ {__('Banners', 'univer-smart-carousel')}
+									</Button>
+									<IconButton
+										label={__('Delete group', 'univer-smart-carousel')}
+										onClick={() => setConfirmDeleteGroup(group)}
+									>
+										<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+											<path
+												fill="currentColor"
+												d="M9 3v1H4v2h16V4h-5V3zm-3 5v12c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V8zm2 2h2v8H8zm4 0h2v8h-2z"
+											/>
+										</svg>
+									</IconButton>
+								</div>
+							</header>
+
+							{!isCollapsed && (
+								<div className="usc-group__body">
+									{grpBanners.length === 0 && (
+										<div className="usc-group__empty">
+											<p>{__('No banners in this group yet.', 'univer-smart-carousel')}</p>
+											<Button
+												variant="secondary"
+												size="sm"
+												onClick={() => onAddBannersToGroup(group)}
+											>
+												{__('Pick from media library', 'univer-smart-carousel')}
+											</Button>
+										</div>
+									)}
+
+									<ul className="usc-banner-list">
+										{grpBanners.map((b) => (
+											<li
+												key={b.id}
+												className={classNames('usc-banner-card', !b.is_active && 'is-paused')}
+											>
+												<div className="usc-banner-card__image">
+													{b.image?.url ? (
+														<img src={b.image.url} alt="" loading="lazy" />
+													) : (
+														<span className="usc-banner-card__placeholder">
+															{__('No image', 'univer-smart-carousel')}
+														</span>
+													)}
+												</div>
+
+												<div className="usc-banner-card__fields">
+													<Input
+														label={__('Destination URL', 'univer-smart-carousel')}
+														type="url"
+														placeholder="https://"
+														value={b.link_url || ''}
+														onChange={(e) =>
+															onUpdateBannerField(b, { link_url: e.target.value })
+														}
+													/>
+													<div className="usc-row-2">
+														<Select
+															label={__('Open link in', 'univer-smart-carousel')}
+															options={TARGET_OPTIONS}
+															value={b.link_target || '_self'}
+															onChange={(v) =>
+																onUpdateBannerField(b, { link_target: v })
+															}
+														/>
+														<Input
+															label={__('Alt text', 'univer-smart-carousel')}
+															placeholder={__(
+																'Describe the banner…',
+																'univer-smart-carousel'
+															)}
+															value={b.alt_text || ''}
+															onChange={(e) =>
+																onUpdateBannerField(b, { alt_text: e.target.value })
+															}
+														/>
+													</div>
+												</div>
+
+												<div className="usc-banner-card__actions">
+													<label className="usc-banner-card__toggle" title={__('Active', 'univer-smart-carousel')}>
+														<input
+															type="checkbox"
+															checked={b.is_active}
+															onChange={() => onToggleBanner(b)}
+														/>
+														<span className="usc-switch__track">
+															<span className="usc-switch__thumb" />
+														</span>
+													</label>
+													<IconButton
+														label={__('Delete banner', 'univer-smart-carousel')}
+														onClick={() => setConfirmDeleteBanner(b)}
+													>
+														<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+															<path
+																fill="currentColor"
+																d="M9 3v1H4v2h16V4h-5V3zm-3 5v12c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V8zm2 2h2v8H8zm4 0h2v8h-2z"
+															/>
+														</svg>
+													</IconButton>
+												</div>
+											</li>
+										))}
+									</ul>
+								</div>
+							)}
+						</div>
+					);
+				})}
+			</div>
+
+			{/* Rename group modal */}
+			<Modal
+				open={!!renaming}
+				onClose={() => setRenaming(null)}
+				title={__('Rename group', 'univer-smart-carousel')}
+				footer={
+					<>
+						<Button variant="ghost" onClick={() => setRenaming(null)}>
+							{__('Cancel', 'univer-smart-carousel')}
+						</Button>
+						<Button variant="primary" onClick={onRenameGroup}>
+							{__('Save', 'univer-smart-carousel')}
+						</Button>
+					</>
+				}
+			>
+				<Input
+					label={__('Group name', 'univer-smart-carousel')}
+					value={draftName}
+					onChange={(e) => setDraftName(e.target.value)}
+					autoFocus
+				/>
+			</Modal>
+
+			{/* Delete group confirm */}
+			<Modal
+				open={!!confirmDeleteGroup}
+				onClose={() => setConfirmDeleteGroup(null)}
+				title={
+					confirmDeleteGroup
+						? sprintf(
+								/* translators: %s: group name */
+								__('Delete group "%s"?', 'univer-smart-carousel'),
+								confirmDeleteGroup.name
+						  )
+						: ''
+				}
+				footer={
+					<>
+						<Button variant="ghost" onClick={() => setConfirmDeleteGroup(null)}>
+							{__('Cancel', 'univer-smart-carousel')}
+						</Button>
+						<Button variant="danger" onClick={onDeleteGroup}>
+							{__('Delete permanently', 'univer-smart-carousel')}
+						</Button>
+					</>
+				}
+			>
+				<p>
+					{__(
+						'All banners inside this group will be deleted too. If you just want to hide them temporarily, use the toggle on the group header instead.',
+						'univer-smart-carousel'
+					)}
+				</p>
+			</Modal>
+
+			{/* Delete banner confirm */}
+			<Modal
+				open={!!confirmDeleteBanner}
+				onClose={() => setConfirmDeleteBanner(null)}
+				title={__('Delete banner?', 'univer-smart-carousel')}
+				footer={
+					<>
+						<Button variant="ghost" onClick={() => setConfirmDeleteBanner(null)}>
+							{__('Cancel', 'univer-smart-carousel')}
+						</Button>
+						<Button variant="danger" onClick={onDeleteBanner}>
+							{__('Delete', 'univer-smart-carousel')}
+						</Button>
+					</>
+				}
+			>
+				<p>
+					{__(
+						'The banner will be removed from this group. The image stays in your media library.',
+						'univer-smart-carousel'
+					)}
+				</p>
+			</Modal>
+		</div>
+	);
+}

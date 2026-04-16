@@ -15,7 +15,7 @@ import {
 	Modal,
 	toast,
 } from './ui';
-import BannerEditor from './BannerEditor';
+import GroupedBannerEditor from './GroupedBannerEditor';
 import ShortcodePanel from './ShortcodePanel';
 import AspectRatioField from './AspectRatioField';
 import { Campaigns as API } from '../lib/api';
@@ -166,19 +166,31 @@ export default function CampaignEditor({ campaign, onChange, onSave, onDelete, s
 							</button>
 						</div>
 
-						{tab === 'desktop' ? (
-							<BannerEditor
-								device="desktop"
-								banners={desktopBanners}
-								onChange={handleBannersChange('desktop')}
-							/>
-						) : (
-							<BannerEditor
-								device="mobile"
-								banners={mobileBanners}
-								onChange={handleBannersChange('mobile')}
-							/>
-						)}
+						<GroupedBannerEditor
+							campaignId={campaign.id}
+							device={tab}
+							groups={campaign.groups || []}
+							banners={[
+								...((campaign.banners?.desktop || []).map((b) => ({ ...b, device: 'desktop' }))),
+								...((campaign.banners?.mobile || []).map((b) => ({ ...b, device: 'mobile' }))),
+							]}
+							onChange={(patch) => {
+								// patch may carry { groups?, banners? } as flat arrays.
+								// We need to push them back into the editor state's
+								// expected shape (banners.desktop / banners.mobile).
+								const next = { ...campaign };
+								if (patch.groups) {
+									next.groups = patch.groups;
+								}
+								if (patch.banners) {
+									next.banners = {
+										desktop: patch.banners.filter((b) => b.device === 'desktop'),
+										mobile: patch.banners.filter((b) => b.device === 'mobile'),
+									};
+								}
+								onChange(next);
+							}}
+						/>
 					</Card>
 				</div>
 

@@ -52,3 +52,16 @@ export const ApiKeys = {
 	revoke: (id) => request(`/api-keys/${id}/revoke`, { method: 'POST' }),
 	remove: (id) => request(`/api-keys/${id}`, { method: 'DELETE' }),
 };
+
+export const Groups = {
+	create: (campaignId, data) =>
+		request(`/campaigns/${campaignId}/groups`, { method: 'POST', data }),
+	update: (gid, data) => request(`/groups/${gid}`, { method: 'PUT', data }),
+	remove: (gid) => request(`/groups/${gid}`, { method: 'DELETE' }),
+	addBanner: (gid, data) => request(`/groups/${gid}/banners`, { method: 'POST', data }),
+};
+
+export const Banners = {
+	update: (bid, data) => request(`/banners/${bid}`, { method: 'PUT', data }),
+	remove: (bid) => request(`/banners/${bid}`, { method: 'DELETE' }),
+};
