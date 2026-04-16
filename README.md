@@ -54,19 +54,29 @@ The public-side bundle is ~10 KB gzipped (Embla Carousel + its autoplay plugin �
 
 If something in the bundle looks bloated to you, open an issue and I'll take a look.
 
-## REST API
+## Public API (AI-friendly)
 
-If you want to script things or build your own admin, everything goes through `usc/v1`:
+The plugin ships with a full REST API designed to be driven by AI agents and external integrations as easily as the bundled admin UI. Everything the admin can do, the API can do.
 
-| Method | Path              | Description                          |
-|--------|-------------------|--------------------------------------|
-| GET    | `/campaigns`      | List campaigns                       |
-| POST   | `/campaigns`      | Create campaign + banners            |
-| GET    | `/campaigns/{id}` | Get one (banners included)           |
-| PUT    | `/campaigns/{id}` | Update                               |
-| DELETE | `/campaigns/{id}` | Delete (cascades to banners)         |
+- Bearer-token auth with revocable, scoped (`read` / `write`) keys
+- Single `/discover` endpoint returns the whole schema + examples in one document
+- Verb-style endpoints (`/activate`, `/deactivate`, `/by-slug/{slug}`, per-banner CRUD) on top of the classic REST
+- Partial updates — `PUT` preserves anything you don't send
+- Cookie + nonce auth still works for in-browser callers (the bundled React admin uses this)
 
-Every endpoint needs `manage_options` and a REST nonce.
+Quick start:
+
+```bash
+# 1. WP admin → Smart Carousel → Settings → API Keys → New key
+# 2. See everything the API exposes:
+curl https://your-site.com/wp-json/usc/v1/discover
+
+# 3. List campaigns:
+curl -H "Authorization: Bearer usc_live_xxx" \
+  https://your-site.com/wp-json/usc/v1/campaigns
+```
+
+Full reference in [API.md](API.md).
 
 ## Database
 
