@@ -42,7 +42,10 @@ final class Campaign_Repository {
 			'navigation'              => 'arrows', // none|dots|arrows
 			'show_progress'           => false,
 			'pause_on_hover'          => true,
-			'border_radius'           => 16,
+			// 0 = sharp corners (the right default for full-bleed hero
+			// banners). Bump it up only when the carousel sits inside a
+			// padded card layout where rounded corners read better.
+			'border_radius'           => 0,
 			'transition'              => 'slide', // slide|fade
 			// Default 'auto' = the image's intrinsic ratio dictates the slide
 			// height. No cropping, no whitespace. Switch to a fixed ratio
@@ -111,18 +114,37 @@ final class Campaign_Repository {
 		return 'arrows';
 	}
 
+	/**
+	 * Accepts:
+	 *   - "auto"           → auto (image's intrinsic ratio)
+	 *   - "16/9", "21/9"   → preset-style ratio
+	 *   - "1560x1080"      → "WxH" pixel dimensions, normalized to "1560/1080"
+	 *   - "16:9"           → colon-separated, normalized to "16/9"
+	 *
+	 * Width and height each capped at 9999 to keep the resulting CSS
+	 * `aspect-ratio` value sane and avoid pathological inputs.
+	 */
 	private static function sanitize_ratio( $value, string $fallback ): string {
 		if ( ! is_string( $value ) ) {
 			return $fallback;
 		}
 		$value = strtolower( trim( $value ) );
+		if ( '' === $value ) {
+			return $fallback;
+		}
 		if ( 'auto' === $value ) {
 			return 'auto';
 		}
-		if ( ! preg_match( '#^([1-9]\d{0,2})/([1-9]\d{0,2})$#', $value ) ) {
-			return $fallback;
+
+		// Strip a trailing "px" if the user pasted dimensions like "1920px x 650px".
+		$value = preg_replace( '/\s*px\b/', '', $value );
+		$value = preg_replace( '/\s+/', '', $value );
+
+		if ( preg_match( '#^([1-9]\d{0,3})\s*[/x:]\s*([1-9]\d{0,3})$#', $value, $m ) ) {
+			return $m[1] . '/' . $m[2];
 		}
-		return $value;
+
+		return $fallback;
 	}
 
 	public static function sanitize_status( $value ): string {
