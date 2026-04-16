@@ -344,6 +344,84 @@ export default function CampaignEditor({ campaign, onChange, onSave, onDelete, s
 							/>
 						</div>
 					</Card>
+
+					<Card>
+						<SectionHeader
+							eyebrow={__('Performance', 'univer-smart-carousel')}
+							title={__('Image optimization', 'univer-smart-carousel')}
+							description={__(
+								'Resize, recompress, and serve WebP. The first render after you change a setting generates the new variants; subsequent views are cached.',
+								'univer-smart-carousel'
+							)}
+						/>
+						<div className="usc-stack">
+							<Switch
+								checked={settings.image_optimization !== false}
+								onChange={(v) => setSetting({ image_optimization: v })}
+								label={__('Optimize images for this carousel', 'univer-smart-carousel')}
+								hint={__(
+									'When off, the original upload is served as-is.',
+									'univer-smart-carousel'
+								)}
+							/>
+							{settings.image_optimization !== false && (
+								<>
+									<Input
+										label={__('JPEG quality', 'univer-smart-carousel')}
+										hint={__('40 = aggressive, 82 = default, 95 = near-lossless.', 'univer-smart-carousel')}
+										type="number"
+										min={40}
+										max={95}
+										value={settings.image_quality ?? 82}
+										onChange={(e) =>
+											setSetting({ image_quality: parseInt(e.target.value, 10) || 82 })
+										}
+									/>
+									<div className="usc-row-2">
+										<Input
+											label={__('Max width (desktop)', 'univer-smart-carousel')}
+											hint={__('px', 'univer-smart-carousel')}
+											type="number"
+											min={400}
+											max={3840}
+											step={20}
+											value={settings.image_max_width_desktop ?? 1920}
+											onChange={(e) =>
+												setSetting({
+													image_max_width_desktop:
+														parseInt(e.target.value, 10) || 1920,
+												})
+											}
+										/>
+										<Input
+											label={__('Max width (mobile)', 'univer-smart-carousel')}
+											hint={__('px', 'univer-smart-carousel')}
+											type="number"
+											min={320}
+											max={1536}
+											step={10}
+											value={settings.image_max_width_mobile ?? 750}
+											onChange={(e) =>
+												setSetting({
+													image_max_width_mobile:
+														parseInt(e.target.value, 10) || 750,
+												})
+											}
+										/>
+									</div>
+									<Switch
+										checked={settings.image_webp !== false}
+										onChange={(v) => setSetting({ image_webp: v })}
+										label={__('Serve WebP when the browser supports it', 'univer-smart-carousel')}
+										hint={__(
+											'Smaller than JPEG at the same visual quality. Host must support WebP encoding.',
+											'univer-smart-carousel'
+										)}
+									/>
+								</>
+							)}
+						</div>
+					</Card>
 				</aside>
 			</div>
 

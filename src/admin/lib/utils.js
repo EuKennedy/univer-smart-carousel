@@ -59,6 +59,11 @@ export function defaultSettings() {
 		transition: 'slide',
 		aspect_ratio_desktop: 'auto',
 		aspect_ratio_mobile: 'auto',
+		image_optimization: true,
+		image_quality: 82,
+		image_webp: true,
+		image_max_width_desktop: 1920,
+		image_max_width_mobile: 750,
 	};
 }
 
