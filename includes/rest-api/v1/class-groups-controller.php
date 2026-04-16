@@ -78,6 +78,18 @@ final class Groups_Controller {
 				'permission_callback' => [ $this, 'permission_write' ],
 			]
 		);
+
+		// Reorder groups inside a carousel/device in a single round-trip.
+		// Body: { device: 'desktop'|'mobile', order: [gid, gid, gid, ...] }
+		register_rest_route(
+			$this->namespace,
+			'/campaigns/(?P<id>\d+)/groups/reorder',
+			[
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => [ $this, 'reorder' ],
+				'permission_callback' => [ $this, 'permission_write' ],
+			]
+		);
 	}
 
 	public function permission_read( WP_REST_Request $request ) {
@@ -134,6 +146,36 @@ final class Groups_Controller {
 			return new WP_Error( 'usc_not_found', __( 'Group not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
 		}
 		return new WP_REST_Response( [ 'deleted' => true, 'id' => $gid ], 200 );
+	}
+
+	public function reorder( WP_REST_Request $request ) {
+		$id      = (int) $request['id'];
+		$payload = $this->payload( $request );
+
+		$device = Campaign_Repository::sanitize_device( $payload['device'] ?? 'desktop' );
+		$order  = isset( $payload['order'] ) && is_array( $payload['order'] ) ? $payload['order'] : [];
+
+		$ids = array_values(
+			array_map(
+				static function ( $v ) {
+					return (int) $v;
+				},
+				$order
+			)
+		);
+		$ids = array_filter(
+			$ids,
+			static function ( $v ) {
+				return $v > 0;
+			}
+		);
+
+		Banner_Group_Repository::reorder( $id, $device, array_values( $ids ) );
+
+		return new WP_REST_Response(
+			Banner_Group_Repository::list_for_campaign( $id, $device ),
+			200
+		);
 	}
 
 	public function add_banner( WP_REST_Request $request ) {

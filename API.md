@@ -91,6 +91,7 @@ Base URL: `https://your-site.com/wp-json/usc/v1`
 | PUT    | `/groups/{gid}` | write | Partial update — `name`, `is_active` (pause/resume), `sort_order`. |
 | DELETE | `/groups/{gid}` | write | Delete + cascade banners. |
 | POST   | `/groups/{gid}/banners` | write | Append a banner to the group. Body: `{ image_id, link_url?, alt_text?, link_target? }`. |
+| POST   | `/campaigns/{id}/groups/reorder` | write | Rewrite the sort order of groups inside a carousel+device in one round-trip. Body: `{ device, order: [gid, gid, ...] }`. |
 
 ### Per-banner ops
 

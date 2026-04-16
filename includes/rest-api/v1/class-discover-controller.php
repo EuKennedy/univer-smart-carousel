@@ -371,6 +371,13 @@ final class Discover_Controller {
 				'summary'  => 'Append one banner to a group. Body: { image_id, link_url?, alt_text?, link_target? }.',
 				'returns'  => 'campaign',
 			],
+			[
+				'method'   => 'POST',
+				'path'     => '/campaigns/{id}/groups/reorder',
+				'auth'     => 'write',
+				'summary'  => 'Rewrite the sort order of groups inside a campaign+device in one round-trip. Body: { device, order: [gid, gid, ...] } — the array order is the new order.',
+				'returns'  => 'array<group>',
+			],
 
 			// Per-banner ops
 			[
