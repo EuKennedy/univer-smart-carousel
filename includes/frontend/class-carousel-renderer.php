@@ -45,7 +45,8 @@ final class Carousel_Renderer {
 		$settings    = $campaign['settings'];
 		$is_desktop  = Campaign_Repository::DEVICE_DESKTOP === $device;
 		$slides_pv   = $is_desktop ? (float) $settings['slides_per_view_desktop'] : (float) $settings['slides_per_view_mobile'];
-		$aspect      = $is_desktop ? $settings['aspect_ratio_desktop'] : $settings['aspect_ratio_mobile'];
+		$aspect      = (string) ( $is_desktop ? $settings['aspect_ratio_desktop'] : $settings['aspect_ratio_mobile'] );
+		$is_auto     = 'auto' === $aspect;
 		$dom_id      = sprintf( 'usc-%s-%s-%s', $device, sanitize_html_class( $campaign['slug'] ), wp_generate_uuid4() );
 
 		// Preload the first image for LCP (only if we're rendering one carousel above the fold).
@@ -68,19 +69,38 @@ final class Carousel_Renderer {
 			'pauseOnHover'  => (bool) $settings['pause_on_hover'],
 			'transition'    => (string) $settings['transition'],
 			'device'        => $device,
+			'autoAspect'    => $is_auto,
 		];
+
+		// Only set --usc-aspect when we have a real ratio. In auto mode the
+		// CSS skips ::before entirely, so feeding it "auto" as a CSS value
+		// would just sit there unused — and trip up validators.
+		$style_parts = [
+			'--usc-gap: ' . (int) $settings['gap'] . 'px',
+			'--usc-radius:' . (int) $settings['border_radius'] . 'px',
+			'--usc-spv:' . (string) $slides_pv,
+		];
+		if ( ! $is_auto ) {
+			$style_parts[] = '--usc-aspect:' . str_replace( '/', ' / ', $aspect );
+		}
+		$style_attr = esc_attr( implode( ';', $style_parts ) . ';' );
+
+		$root_classes = [ 'usc-carousel', 'usc-carousel--' . $device ];
+		if ( $is_auto ) {
+			$root_classes[] = 'is-auto-aspect';
+		}
 
 		ob_start();
 		?>
 <section
 	id="<?php echo esc_attr( $dom_id ); ?>"
-	class="usc-carousel usc-carousel--<?php echo esc_attr( $device ); ?>"
+	class="<?php echo esc_attr( implode( ' ', $root_classes ) ); ?>"
 	role="region"
 	aria-roledescription="carousel"
 	aria-label="<?php echo esc_attr( $campaign['name'] ); ?>"
 	data-usc-carousel
 	data-usc-config="<?php echo esc_attr( wp_json_encode( $config ) ); ?>"
-	style="--usc-gap: <?php echo (int) $settings['gap']; ?>px;--usc-radius:<?php echo (int) $settings['border_radius']; ?>px;--usc-spv:<?php echo esc_attr( (string) $slides_pv ); ?>;--usc-aspect:<?php echo esc_attr( str_replace( '/', ' / ', (string) $aspect ) ); ?>;"
+	style="<?php echo $style_attr; ?>"
 >
 	<link rel="preload" as="image" href="<?php echo esc_url( $first['url'] ); ?>"<?php
 		if ( ! empty( $first['srcset'] ) ) {

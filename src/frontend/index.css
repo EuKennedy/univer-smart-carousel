@@ -55,28 +55,80 @@
 	background: #f5f5f4;
 }
 
-.usc-slide::before {
+/* ----- Aspect ratio modes -----
+ *
+ * Two layout modes, controlled by whether the carousel root carries the
+ * `is-auto-aspect` class:
+ *
+ *   1) Fixed ratio (default):  --usc-aspect is set on the root, the
+ *      slide reserves height through a sized ::before, and the image
+ *      is absolutely positioned to fill the slide with object-fit: cover.
+ *      Use this for product carousels where every slide must be the
+ *      same height regardless of image dimensions.
+ *
+ *   2) Auto:  the image dictates the slide height. No ::before, no
+ *      absolute positioning, image is just a normal block-level child
+ *      with width:100% and intrinsic height. Use this for hero banners
+ *      where the design team already exported the image at the right
+ *      proportions and you don't want any cropping or whitespace.
+ *
+ * The !important calls below are intentional: many WP themes (Woodmart,
+ * Astra, OceanWP, etc.) ship aggressive `.entry-content img { ... }`
+ * resets that override our sizing without it. Specificity alone isn't
+ * enough when the theme uses !important itself.
+ */
+
+/* Fixed-aspect mode */
+.usc-carousel:not(.is-auto-aspect) .usc-slide::before {
 	content: '';
 	display: block;
 	aspect-ratio: var(--usc-aspect, 21 / 9);
 	width: 100%;
 }
 
-.usc-link {
-	position: absolute;
-	inset: 0;
+.usc-carousel:not(.is-auto-aspect) .usc-link {
+	position: absolute !important;
+	inset: 0 !important;
 	display: block;
 	color: inherit;
 	text-decoration: none;
+	width: auto !important;
+	height: auto !important;
+	max-width: none !important;
 }
 
-.usc-image {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
+.usc-carousel:not(.is-auto-aspect) .usc-image {
+	position: absolute !important;
+	inset: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	max-width: none !important;
+	max-height: none !important;
+	object-fit: cover !important;
+	object-position: center center;
 	display: block;
+	margin: 0 !important;
+	padding: 0 !important;
+	transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Auto mode — let the image's intrinsic ratio drive the slide height. */
+.usc-carousel.is-auto-aspect .usc-link {
+	display: block;
+	color: inherit;
+	text-decoration: none;
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+.usc-carousel.is-auto-aspect .usc-image {
+	display: block !important;
+	width: 100% !important;
+	height: auto !important;
+	max-width: 100% !important;
+	max-height: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
 	transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 

@@ -44,8 +44,12 @@ final class Campaign_Repository {
 			'pause_on_hover'          => true,
 			'border_radius'           => 16,
 			'transition'              => 'slide', // slide|fade
-			'aspect_ratio_desktop'    => '21/9',
-			'aspect_ratio_mobile'     => '4/5',
+			// Default 'auto' = the image's intrinsic ratio dictates the slide
+			// height. No cropping, no whitespace. Switch to a fixed ratio
+			// only when running multi-slide product carousels where every
+			// card needs the same height regardless of source dimensions.
+			'aspect_ratio_desktop'    => 'auto',
+			'aspect_ratio_mobile'     => 'auto',
 		];
 	}
 
@@ -111,7 +115,10 @@ final class Campaign_Repository {
 		if ( ! is_string( $value ) ) {
 			return $fallback;
 		}
-		$value = trim( $value );
+		$value = strtolower( trim( $value ) );
+		if ( 'auto' === $value ) {
+			return 'auto';
+		}
 		if ( ! preg_match( '#^([1-9]\d{0,2})/([1-9]\d{0,2})$#', $value ) ) {
 			return $fallback;
 		}
