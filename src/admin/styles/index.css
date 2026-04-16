@@ -63,7 +63,7 @@
 	}
 }
 
-/* ---------- Reset within our root only ---------- */
+/* ---------- Reset (scoped) ---------- */
 
 .usc-admin-root,
 .usc-admin-root *,
@@ -72,23 +72,18 @@
 	box-sizing: border-box;
 }
 
-#wpcontent {
-	padding-left: 0 !important;
-}
-
-#wpbody-content {
-	padding-bottom: 0;
-}
-
-.wrap.usc-admin-root,
 .usc-admin-root {
-	margin: 0;
+	/* Eat #wpcontent's 20px left padding and the 10px gutter at the top of
+	 * #wpbody-content so we render full-bleed inside the admin shell.
+	 * Right side stays where #wpbody-content puts it (width: 100%, no
+	 * right padding to fight). WP notices keep their normal position. */
+	margin: -10px 0 0 -20px;
+	background: var(--usc-color-bg);
 }
 
 /* ---------- App shell ---------- */
 
 .usc-app {
-	margin: -10px 0 0 -20px;
 	min-height: calc(100vh - 32px);
 	background: var(--usc-color-bg);
 	color: var(--usc-color-text);
@@ -104,11 +99,9 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 14px 24px;
+	padding: 14px 28px;
 	background: var(--usc-color-surface);
 	border-bottom: 1px solid var(--usc-color-border);
-	position: sticky;
-	top: 32px;
 	z-index: 10;
 }
 
@@ -312,6 +305,8 @@
 .usc-editor {
 	padding: 28px 32px;
 	max-width: 1400px;
+	margin: 0 auto;
+	width: 100%;
 }
 
 .usc-editor__topbar {
