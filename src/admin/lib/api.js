@@ -45,3 +45,10 @@ export const Settings = {
 	get: () => request('/settings'),
 	update: (data) => request('/settings', { method: 'PUT', data }),
 };
+
+export const ApiKeys = {
+	list: () => request('/api-keys'),
+	create: (data) => request('/api-keys', { method: 'POST', data }),
+	revoke: (id) => request(`/api-keys/${id}/revoke`, { method: 'POST' }),
+	remove: (id) => request(`/api-keys/${id}`, { method: 'DELETE' }),
+};

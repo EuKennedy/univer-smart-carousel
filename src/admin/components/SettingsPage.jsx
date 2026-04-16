@@ -8,6 +8,7 @@
 import { useEffect, useState, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Button, Card, SectionHeader, Select, Spinner, toast } from './ui';
+import ApiKeysCard from './ApiKeysCard';
 import { Settings as API } from '../lib/api';
 
 const LANGUAGE_OPTIONS = [
@@ -105,6 +106,8 @@ export default function SettingsPage({ onSaved }) {
 						</p>
 					</div>
 				</Card>
+
+				<ApiKeysCard />
 			</div>
 		</div>
 	);
