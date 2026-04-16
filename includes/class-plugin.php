@@ -45,6 +45,9 @@ final class Plugin {
 		// Translations have to be wired up before the first __() call from
 		// any of the other subsystems, hence the early registration here.
 		$this->subsystems['i18n']      = new I18n\Translations();
+		// Auth middleware boots before REST so the Bearer-token resolution
+		// is in place by the time route permission_callbacks fire.
+		$this->subsystems['auth']      = new Api\Api_Auth_Middleware();
 		$this->subsystems['admin']     = new Admin\Admin_Loader();
 		$this->subsystems['frontend']  = new Frontend\Frontend_Loader();
 		$this->subsystems['shortcode'] = new Shortcode\Shortcode_Handler();

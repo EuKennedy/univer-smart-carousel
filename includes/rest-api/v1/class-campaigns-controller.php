@@ -14,6 +14,7 @@
 
 namespace Univer\SmartCarousel\Rest_Api\V1;
 
+use Univer\SmartCarousel\Api\Api_Auth_Middleware;
 use Univer\SmartCarousel\Database\Campaign_Repository;
 use WP_Error;
 use WP_REST_Request;
@@ -35,7 +36,7 @@ final class Campaigns_Controller {
 				[
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => [ $this, 'list_items' ],
-					'permission_callback' => [ $this, 'admin_permission' ],
+					'permission_callback' => [ $this, 'permission_read' ],
 					'args'                => [
 						'search' => [ 'type' => 'string' ],
 						'status' => [ 'type' => 'string' ],
@@ -44,7 +45,7 @@ final class Campaigns_Controller {
 				[
 					'methods'             => WP_REST_Server::CREATABLE,
 					'callback'            => [ $this, 'create_item' ],
-					'permission_callback' => [ $this, 'admin_permission' ],
+					'permission_callback' => [ $this, 'permission_write' ],
 				],
 			]
 		);
@@ -56,24 +57,103 @@ final class Campaigns_Controller {
 				[
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => [ $this, 'get_item' ],
-					'permission_callback' => [ $this, 'admin_permission' ],
+					'permission_callback' => [ $this, 'permission_read' ],
 				],
 				[
 					'methods'             => WP_REST_Server::EDITABLE,
 					'callback'            => [ $this, 'update_item' ],
-					'permission_callback' => [ $this, 'admin_permission' ],
+					'permission_callback' => [ $this, 'permission_write' ],
 				],
 				[
 					'methods'             => WP_REST_Server::DELETABLE,
 					'callback'            => [ $this, 'delete_item' ],
-					'permission_callback' => [ $this, 'admin_permission' ],
+					'permission_callback' => [ $this, 'permission_write' ],
+				],
+			]
+		);
+
+		// AI-friendly verbose endpoints. Same data, different shape — these
+		// are the ones IAs and integrations should reach for first.
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/by-slug/(?P<slug>[a-z0-9-]+)',
+			[
+				[
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => [ $this, 'get_by_slug' ],
+					'permission_callback' => [ $this, 'permission_read' ],
+				],
+				[
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => [ $this, 'update_by_slug' ],
+					'permission_callback' => [ $this, 'permission_write' ],
+				],
+				[
+					'methods'             => WP_REST_Server::DELETABLE,
+					'callback'            => [ $this, 'delete_by_slug' ],
+					'permission_callback' => [ $this, 'permission_write' ],
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/(?P<id>\d+)/activate',
+			[
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => [ $this, 'activate' ],
+				'permission_callback' => [ $this, 'permission_write' ],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/(?P<id>\d+)/deactivate',
+			[
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => [ $this, 'deactivate' ],
+				'permission_callback' => [ $this, 'permission_write' ],
+			]
+		);
+
+		// Per-banner CRUD so callers can append/replace one banner without
+		// having to re-send the whole banner list.
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/(?P<id>\d+)/banners',
+			[
+				[
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => [ $this, 'list_banners' ],
+					'permission_callback' => [ $this, 'permission_read' ],
+				],
+				[
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => [ $this, 'add_banner' ],
+					'permission_callback' => [ $this, 'permission_write' ],
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/(?P<id>\d+)/banners/(?P<bid>\d+)',
+			[
+				[
+					'methods'             => WP_REST_Server::DELETABLE,
+					'callback'            => [ $this, 'delete_banner' ],
+					'permission_callback' => [ $this, 'permission_write' ],
 				],
 			]
 		);
 	}
 
-	public function admin_permission(): bool {
-		return current_user_can( USC_ADMIN_CAPABILITY );
+	public function permission_read( WP_REST_Request $request ) {
+		return Api_Auth_Middleware::can_access( $request, 'read' );
+	}
+
+	public function permission_write( WP_REST_Request $request ) {
+		return Api_Auth_Middleware::can_access( $request, 'write' );
 	}
 
 	/* -------------------------- HANDLERS -------------------------- */
@@ -138,6 +218,127 @@ final class Campaigns_Controller {
 			return new WP_Error( 'usc_delete_failed', __( 'Failed to delete campaign.', 'univer-smart-carousel' ), [ 'status' => 500 ] );
 		}
 		return new WP_REST_Response( [ 'deleted' => true, 'id' => $id ], 200 );
+	}
+
+	/* ------------------- AI-FRIENDLY VERBOSE ENDPOINTS ------------------ */
+
+	public function get_by_slug( WP_REST_Request $request ) {
+		$slug     = (string) $request['slug'];
+		$campaign = Campaign_Repository::get_campaign_by_slug( $slug, true );
+		if ( ! $campaign ) {
+			return new WP_Error( 'usc_not_found', __( 'Campaign not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
+		}
+		return new WP_REST_Response( $campaign, 200 );
+	}
+
+	public function update_by_slug( WP_REST_Request $request ) {
+		$slug     = (string) $request['slug'];
+		$campaign = Campaign_Repository::get_campaign_by_slug( $slug );
+		if ( ! $campaign ) {
+			return new WP_Error( 'usc_not_found', __( 'Campaign not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
+		}
+		$request->set_param( 'id', $campaign['id'] );
+		return $this->update_item( $request );
+	}
+
+	public function delete_by_slug( WP_REST_Request $request ) {
+		$slug     = (string) $request['slug'];
+		$campaign = Campaign_Repository::get_campaign_by_slug( $slug );
+		if ( ! $campaign ) {
+			return new WP_Error( 'usc_not_found', __( 'Campaign not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
+		}
+		$request->set_param( 'id', $campaign['id'] );
+		return $this->delete_item( $request );
+	}
+
+	public function activate( WP_REST_Request $request ) {
+		return $this->set_status( (int) $request['id'], Campaign_Repository::STATUS_ACTIVE );
+	}
+
+	public function deactivate( WP_REST_Request $request ) {
+		return $this->set_status( (int) $request['id'], Campaign_Repository::STATUS_PAUSED );
+	}
+
+	private function set_status( int $id, string $status ) {
+		$ok = Campaign_Repository::update_campaign( $id, [ 'status' => $status ] );
+		if ( ! $ok ) {
+			return new WP_Error( 'usc_not_found', __( 'Campaign not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
+		}
+		return new WP_REST_Response( Campaign_Repository::get_campaign( $id, true ), 200 );
+	}
+
+	public function list_banners( WP_REST_Request $request ) {
+		$id     = (int) $request['id'];
+		$device = (string) $request->get_param( 'device' );
+		if ( '' !== $device ) {
+			$banners = Campaign_Repository::list_banners( $id, $device );
+		} else {
+			$banners = Campaign_Repository::list_banners( $id );
+		}
+		return new WP_REST_Response( $banners, 200 );
+	}
+
+	public function add_banner( WP_REST_Request $request ) {
+		$id      = (int) $request['id'];
+		$payload = $this->extract_payload( $request );
+
+		$campaign = Campaign_Repository::get_campaign( $id, true );
+		if ( ! $campaign ) {
+			return new WP_Error( 'usc_not_found', __( 'Campaign not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
+		}
+
+		$device   = Campaign_Repository::sanitize_device( $payload['device'] ?? 'desktop' );
+		$existing = array_values(
+			array_filter(
+				$campaign['banners'] ?? [],
+				static function ( $b ) use ( $device ) {
+					return ( $b['device'] ?? '' ) === $device;
+				}
+			)
+		);
+
+		$existing[] = [
+			'image_id'    => isset( $payload['image_id'] ) ? (int) $payload['image_id'] : 0,
+			'link_url'    => $payload['link_url'] ?? '',
+			'link_target' => $payload['link_target'] ?? '_self',
+			'link_rel'    => $payload['link_rel'] ?? '',
+			'alt_text'    => $payload['alt_text'] ?? '',
+		];
+
+		Campaign_Repository::replace_banners( $id, $device, $existing );
+
+		return new WP_REST_Response( Campaign_Repository::get_campaign( $id, true ), 201 );
+	}
+
+	public function delete_banner( WP_REST_Request $request ) {
+		$id  = (int) $request['id'];
+		$bid = (int) $request['bid'];
+
+		$campaign = Campaign_Repository::get_campaign( $id, true );
+		if ( ! $campaign ) {
+			return new WP_Error( 'usc_not_found', __( 'Campaign not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
+		}
+
+		// Group remaining banners back by device, then re-write the device
+		// whose list actually changed.
+		$by_device = [ 'desktop' => [], 'mobile' => [] ];
+		$found     = false;
+		foreach ( $campaign['banners'] ?? [] as $b ) {
+			if ( (int) $b['id'] === $bid ) {
+				$found = true;
+				continue;
+			}
+			$by_device[ $b['device'] ][] = $b;
+		}
+
+		if ( ! $found ) {
+			return new WP_Error( 'usc_not_found', __( 'Banner not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
+		}
+
+		Campaign_Repository::replace_banners( $id, 'desktop', $by_device['desktop'] );
+		Campaign_Repository::replace_banners( $id, 'mobile', $by_device['mobile'] );
+
+		return new WP_REST_Response( Campaign_Repository::get_campaign( $id, true ), 200 );
 	}
 
 	/* -------------------------- HELPERS -------------------------- */

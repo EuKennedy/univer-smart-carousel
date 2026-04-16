@@ -34,6 +34,14 @@ final class Database_Installer {
 	}
 
 	/**
+	 * Returns prefixed table name for API keys.
+	 */
+	public static function table_api_keys(): string {
+		global $wpdb;
+		return $wpdb->prefix . USC_TABLE_API_KEYS;
+	}
+
+	/**
 	 * Run on activation. Creates tables if missing, stores version.
 	 */
 	public static function install(): void {
@@ -106,7 +114,30 @@ final class Database_Installer {
 			KEY image_id (image_id)
 		) {$charset_collate};";
 
+		$api_keys = self::table_api_keys();
+
+		// API keys table. We store the bcrypt-hashed full token alongside a
+		// short prefix that lets us narrow lookups by index before doing the
+		// (expensive) hash comparison. The full plain-text key is shown to
+		// the admin once on creation and never persisted.
+		$sql_api_keys = "CREATE TABLE {$api_keys} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			name VARCHAR(191) NOT NULL,
+			key_prefix VARCHAR(20) NOT NULL,
+			key_hash VARCHAR(255) NOT NULL,
+			scope VARCHAR(20) NOT NULL DEFAULT 'read',
+			last_used_at DATETIME NULL DEFAULT NULL,
+			last_used_ip VARCHAR(45) NULL DEFAULT NULL,
+			revoked_at DATETIME NULL DEFAULT NULL,
+			created_by BIGINT UNSIGNED NOT NULL,
+			created_at DATETIME NULL DEFAULT NULL,
+			PRIMARY KEY  (id),
+			KEY key_prefix (key_prefix),
+			KEY active (revoked_at)
+		) {$charset_collate};";
+
 		dbDelta( $sql_campaigns );
 		dbDelta( $sql_banners );
+		dbDelta( $sql_api_keys );
 	}
 }

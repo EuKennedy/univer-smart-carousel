@@ -10,6 +10,7 @@
 
 namespace Univer\SmartCarousel\Rest_Api\V1;
 
+use Univer\SmartCarousel\Api\Api_Auth_Middleware;
 use Univer\SmartCarousel\Database\Settings_Repository;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -30,19 +31,23 @@ final class Settings_Controller {
 				[
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => [ $this, 'get_item' ],
-					'permission_callback' => [ $this, 'admin_permission' ],
+					'permission_callback' => [ $this, 'permission_read' ],
 				],
 				[
 					'methods'             => WP_REST_Server::EDITABLE,
 					'callback'            => [ $this, 'update_item' ],
-					'permission_callback' => [ $this, 'admin_permission' ],
+					'permission_callback' => [ $this, 'permission_write' ],
 				],
 			]
 		);
 	}
 
-	public function admin_permission(): bool {
-		return current_user_can( USC_ADMIN_CAPABILITY );
+	public function permission_read( WP_REST_Request $request ) {
+		return Api_Auth_Middleware::can_access( $request, 'read' );
+	}
+
+	public function permission_write( WP_REST_Request $request ) {
+		return Api_Auth_Middleware::can_access( $request, 'write' );
 	}
 
 	public function get_item() {
