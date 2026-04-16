@@ -1183,6 +1183,127 @@ select.usc-input {
 	margin: 0;
 }
 
+/* ---------- Badges page ---------- */
+
+.usc-badges-grid {
+	list-style: none;
+	margin: 16px 0 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 12px;
+}
+
+.usc-badge-card {
+	margin: 0;
+}
+
+.usc-badge-card__inner {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	padding: 10px 12px;
+	background: var(--usc-color-surface);
+	border: 1px solid var(--usc-color-border);
+	border-radius: var(--usc-radius-md);
+	text-align: left;
+	cursor: pointer;
+	font-family: inherit;
+	transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.usc-badge-card__inner:hover {
+	border-color: var(--usc-color-border-strong);
+	box-shadow: var(--usc-shadow-sm);
+}
+
+.usc-badge-card__inner:focus-visible {
+	outline: 2px solid var(--usc-color-accent);
+	outline-offset: 2px;
+}
+
+.usc-badge-card__swatch {
+	width: 48px;
+	height: 48px;
+	flex-shrink: 0;
+	border-radius: 999px;
+	overflow: hidden;
+	background: var(--usc-color-surface-2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.usc-badge-card__swatch img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.usc-badge-card__placeholder {
+	font-size: 10px;
+	color: var(--usc-color-text-subtle);
+	text-align: center;
+	padding: 0 4px;
+}
+
+.usc-badge-card__body {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	flex: 1;
+}
+
+.usc-badge-card__name {
+	font-weight: 600;
+	font-size: 13.5px;
+	color: var(--usc-color-text);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.usc-badge-card__meta {
+	font-size: 11.5px;
+	color: var(--usc-color-text-subtle);
+}
+
+.usc-badge-editor__swatch {
+	display: flex;
+	gap: 14px;
+	align-items: flex-start;
+	padding: 8px;
+	background: var(--usc-color-surface-2);
+	border-radius: var(--usc-radius-md);
+}
+
+.usc-badge-editor__preview {
+	width: 72px;
+	height: 72px;
+	flex-shrink: 0;
+	border-radius: 999px;
+	overflow: hidden;
+	background: var(--usc-color-surface);
+	border: 1px solid var(--usc-color-border);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.usc-badge-editor__preview img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.usc-badge-editor__actions {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	flex: 1;
+}
+
 /* ---------- Empty state ---------- */
 
 .usc-empty {

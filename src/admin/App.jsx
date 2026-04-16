@@ -9,11 +9,13 @@ import { __ } from '@wordpress/i18n';
 import CampaignList from './components/CampaignList';
 import CampaignEditor from './components/CampaignEditor';
 import SettingsPage from './components/SettingsPage';
+import BadgesPage from './components/BadgesPage';
 import { ToastHost, EmptyState, Button, Spinner, toast } from './components/ui';
 import { Campaigns as API } from './lib/api';
 import { emptyCampaign, classNames } from './lib/utils';
 
 const TAB_CAMPAIGNS = 'campaigns';
+const TAB_BADGES = 'badges';
 const TAB_SETTINGS = 'settings';
 
 export default function App() {
@@ -125,6 +127,15 @@ export default function App() {
 					<button
 						type="button"
 						role="tab"
+						aria-selected={tab === TAB_BADGES}
+						className={classNames('usc-appbar__tab', tab === TAB_BADGES && 'is-active')}
+						onClick={() => setTab(TAB_BADGES)}
+					>
+						{__('Badges', 'univer-smart-carousel')}
+					</button>
+					<button
+						type="button"
+						role="tab"
 						aria-selected={tab === TAB_SETTINGS}
 						className={classNames('usc-appbar__tab', tab === TAB_SETTINGS && 'is-active')}
 						onClick={() => setTab(TAB_SETTINGS)}
@@ -137,7 +148,7 @@ export default function App() {
 
 			</header>
 
-			{tab === TAB_CAMPAIGNS ? (
+			{tab === TAB_CAMPAIGNS && (
 				<div className="usc-app__body">
 					<CampaignList
 						campaigns={campaigns}
@@ -188,9 +199,11 @@ export default function App() {
 						)}
 					</div>
 				</div>
-			) : (
-				<SettingsPage />
 			)}
+
+			{tab === TAB_BADGES && <BadgesPage />}
+
+			{tab === TAB_SETTINGS && <SettingsPage />}
 
 			<ToastHost />
 		</div>
