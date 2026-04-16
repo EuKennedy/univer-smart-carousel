@@ -1,215 +1,114 @@
 # Univer Smart Carousel
 
-> Lightweight, premium banner carousel for WordPress and WooCommerce.
-> Built for marketing teams that ship campaigns weekly and care about Web Vitals.
+A WordPress plugin I built at Univerbeauty because none of the carousel plugins out there did what we actually needed.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
-![PHP 7.4+](https://img.shields.io/badge/PHP-7.4%2B-777BB4.svg)
-![WordPress 6.0+](https://img.shields.io/badge/WordPress-6.0%2B-21759B.svg)
+Our marketing team ships a new banner campaign almost every week — Black Friday, Mother's Day, Mês do Profissional, you name it. Every plugin I tried either dragged 60kb of jQuery onto every page on the site, fought my theme's CSS, or had an admin so painful that designers refused to touch it. So I wrote this one over a few weekends.
 
----
+It does one thing: lets marketing pick a few images (one set for desktop, one for mobile), drop two shortcodes anywhere on the site, and walk away.
 
-## Why this exists
+## The two shortcodes
 
-Most WordPress carousels ship 60+ KB of jQuery, hijack your CSS, and tank your LCP score.
-**Univer Smart Carousel** is the opposite:
+Every campaign you create gives you exactly two:
 
-- **~10 KB gzipped** of vanilla JS on the public side (Embla + Autoplay)
-- **Zero asset cost** on pages without a carousel — assets are conditionally enqueued
-- **Two shortcodes per campaign** — one for desktop, one for mobile
-- **Premium admin UI** — React, Linear/Stripe-grade design, drag-to-reorder banners
-- **A11Y by default** — semantic markup, keyboard nav, `prefers-reduced-motion` respected
-- **Built for LCP** — first slide is preloaded, eager + `fetchpriority="high"`
-- **Per-banner click links**, target, and alt text
-- **Slides per view: 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5** (independent for desktop / mobile)
-- **Scheduling** — start/end dates per campaign
-
----
-
-## Installation
-
-### From release ZIP
-
-1. Download the latest release ZIP from the [Releases page](https://github.com/EuKennedy/univer-smart-carousel/releases).
-2. In WordPress admin, go to **Plugins → Add New → Upload Plugin** and select the ZIP.
-3. Click **Activate**.
-4. A new **Smart Carousel** entry appears in the WordPress sidebar (just below WooCommerce).
-
-### From source
-
-```bash
-git clone https://github.com/EuKennedy/univer-smart-carousel.git
-cd univer-smart-carousel
-npm install
-npm run build
 ```
-
-Then drop the entire `univer-smart-carousel/` folder into `wp-content/plugins/` and activate.
-
----
-
-## Quick start
-
-1. Open **Smart Carousel** in the WordPress sidebar.
-2. Click **New** to create a campaign — give it a name (e.g. *Christmas 2026*).
-3. Pick **desktop banners** and **mobile banners** from your media library.
-   Each banner can have its own destination URL, link target, and alt text.
-4. Adjust **Layout** (slides per view, gap, aspect ratio) and **Behavior** (autoplay, loop, dots, arrows).
-5. Set **Status** to **Active** and click **Save**.
-6. Copy the generated shortcodes from the right-hand panel:
-
-```text
 [carouseldesktop_christmas-2026]
 [carouselmobile_christmas-2026]
 ```
 
-7. Paste them anywhere on your site — page, post, Elementor, hooks, theme template.
-   Wrap them in your own responsive container if you want to hide one on the other breakpoint:
+The slug after the underscore matches the campaign name you typed in the admin. Paste them wherever — page, post, Elementor, theme template. If you need to show one on desktop and the other on mobile, wrap them in your own responsive container; I deliberately didn't bake media queries into the shortcode because every site handles responsive differently and I didn't want to fight anyone's theme.
 
-```html
-<div class="hidden md:block">[carouseldesktop_christmas-2026]</div>
-<div class="block md:hidden">[carouselmobile_christmas-2026]</div>
-```
+## What's in the box
 
----
+- A campaign editor under **Smart Carousel** in the WordPress sidebar
+- Two device tabs — pick images from the media library, drag to reorder, set link/target/alt per banner
+- Per-campaign knobs: slides per view (1 through 5, including 1.5/2.5/3.5/4.5), aspect ratio, gap, border radius, autoplay + delay, loop, dots, arrows, progress bar, pause on hover
+- Start/end dates so a campaign turns itself on and off (handy for set-and-forget Black Friday rollouts)
+- Draft / Active / Paused status
 
-## Admin
+What's **not** in there yet: click tracking, A/B testing, role/page/device targeting. See the bottom — those are coming.
 
-The admin page is a single-page React app mounted on `/wp-admin/admin.php?page=univer-smart-carousel`.
-It lets you:
+## Installing it
 
-- Create, edit, duplicate, schedule, and delete campaigns
-- Pick images via the WordPress Media Library (multi-select supported)
-- Drag-reorder banners within each device tab
-- Preview the generated shortcodes with one-click copy
-- Configure per-campaign:
-  - Slides per view (1 → 5, including half-steps)
-  - Aspect ratio (21/9, 16/9, 4/3, 1/1, 4/5, 9/16)
-  - Autoplay + delay
-  - Loop, arrows, dots, progress bar, pause-on-hover
-  - Border radius, gap, transition (slide / fade)
+**The easy way:**
 
----
+1. Grab the latest ZIP from [Releases](https://github.com/EuKennedy/univer-smart-carousel/releases)
+2. In WP admin: Plugins → Add New → Upload Plugin
+3. Activate. "Smart Carousel" shows up in the sidebar, just below WooCommerce.
 
-## How it stays light on the frontend
-
-Most carousel plugins enqueue their assets on every page. We don't.
-
-1. The shortcode handler sets a flag the first time it actually runs.
-2. The frontend loader hooks into `wp_footer` and **only enqueues** the JS/CSS if that flag is set.
-3. The bundle is a single ~10 KB gzipped IIFE — no jQuery, no React, no polyfills.
-4. The first slide is rendered with `<link rel="preload" as="image">` for a clean LCP.
-5. Subsequent slides are `loading="lazy" decoding="async"`.
-6. `IntersectionObserver` pauses autoplay when the carousel scrolls offscreen.
-7. `prefers-reduced-motion: reduce` disables autoplay entirely.
-
----
-
-## Architecture
-
-```
-univer-smart-carousel/
-├── univer-smart-carousel.php      # Main plugin file (constants, hooks, boot)
-├── includes/
-│   ├── autoload.php
-│   ├── class-plugin.php           # Singleton orchestrator
-│   ├── admin/
-│   │   └── class-admin-loader.php
-│   ├── database/
-│   │   ├── class-database-installer.php
-│   │   └── class-campaign-repository.php
-│   ├── frontend/
-│   │   ├── class-frontend-loader.php
-│   │   └── class-carousel-renderer.php
-│   ├── rest-api/
-│   │   ├── class-rest-api-module.php
-│   │   └── v1/
-│   │       └── class-campaigns-controller.php
-│   └── shortcode/
-│       └── class-shortcode-handler.php
-├── src/
-│   ├── admin/                     # React admin app (built with Vite)
-│   └── frontend/                  # Embla wiring (built with Vite)
-└── dist/
-    ├── admin/index.{js,css}       # Built admin assets
-    └── frontend/index.{js,css}    # Built frontend assets
-```
-
-### REST API
-
-All admin operations go through `usc/v1`:
-
-| Method | Path                  | Description                        |
-| :----- | :-------------------- | :--------------------------------- |
-| GET    | `/campaigns`          | List campaigns (search, status)    |
-| POST   | `/campaigns`          | Create a campaign with banners     |
-| GET    | `/campaigns/{id}`     | Get a single campaign with banners |
-| PUT    | `/campaigns/{id}`     | Update a campaign                  |
-| DELETE | `/campaigns/{id}`     | Delete a campaign                  |
-
-All endpoints require the `manage_options` capability and a valid REST nonce
-(handled automatically by `@wordpress/api-fetch`).
-
-### Database
-
-Two tables, created via `dbDelta` on activation:
-
-- `wp_usc_campaigns` — campaign metadata + JSON settings + scheduling window
-- `wp_usc_banners`   — per-campaign banners (one row per banner per device), with link/target/alt/order
-
-Tables are **not** dropped on deactivation — uninstalling and reinstalling preserves data.
-
----
-
-## Development
+**From source, if you want to hack on it:**
 
 ```bash
-# Install dependencies
-npm install
-
-# Build everything
-npm run build
-
-# Watch mode (separate terminals)
-npm run dev:admin
-npm run dev:frontend
+git clone https://github.com/EuKennedy/univer-smart-carousel.git
+cd univer-smart-carousel
+npm install && npm run build
 ```
 
-Vite outputs `dist/admin/index.{js,css}` and `dist/frontend/index.{js,css}`, both committed
-to the repository so end users can install from a release ZIP without running a build.
+Then drop the folder into `wp-content/plugins/` and activate.
 
-### Coding standards
+## About performance
 
-- PHP 7.4+, namespaced `\Univer\SmartCarousel\…`
-- WordPress class file naming (`class-foo-bar.php`)
-- All input sanitized at the boundary (`sanitize_text_field`, `esc_url_raw`, `absint`, …)
-- All output escaped (`esc_html`, `esc_attr`, `esc_url`)
-- All REST endpoints have a `permission_callback`
-- All DB queries go through `Campaign_Repository`
+This is the part I actually cared about. Performance was the reason I wrote the thing.
 
-### Pull requests
+The public-side bundle is ~10 KB gzipped (Embla Carousel + its autoplay plugin — no jQuery, no React, no polyfills). It only loads on pages that have one of the shortcodes in them; everywhere else pays nothing. The first slide gets a `<link rel="preload" as="image">` and renders with `loading="eager" fetchpriority="high"` so it doesn't murder your LCP. The rest are lazy. Autoplay pauses when the carousel scrolls offscreen (via `IntersectionObserver`) and is disabled entirely if the user has `prefers-reduced-motion` set.
 
-PRs are welcome. Please:
+If something in the bundle looks bloated to you, open an issue and I'll take a look.
 
-1. Open an issue describing the change first.
-2. Match the existing code style.
-3. Include a short note in the PR body about Web Vitals impact.
+## REST API
 
----
+If you want to script things or build your own admin, everything goes through `usc/v1`:
 
-## Roadmap
+| Method | Path              | Description                          |
+|--------|-------------------|--------------------------------------|
+| GET    | `/campaigns`      | List campaigns                       |
+| POST   | `/campaigns`      | Create campaign + banners            |
+| GET    | `/campaigns/{id}` | Get one (banners included)           |
+| PUT    | `/campaigns/{id}` | Update                               |
+| DELETE | `/campaigns/{id}` | Delete (cascades to banners)         |
 
-The first release covers everything marketing needs to ship banners by themselves.
-Phase 2 will add:
+Every endpoint needs `manage_options` and a REST nonce.
 
-- **Click + impression tracking** with a built-in dashboard
-- **Native A/B testing** at the campaign level
-- **Targeting** by user role, device, page, geo
-- **Block editor (Gutenberg) embed**
-- **WP-CLI commands** for scripted campaign rollouts
+## Database
 
----
+Two tables, created with `dbDelta` on activation. They survive deactivation — turn the plugin off and on, your campaigns are still there.
+
+- `wp_usc_campaigns` — name, slug, status, settings (JSON), scheduling window
+- `wp_usc_banners` — image, link, target, alt, order, indexed on `(campaign_id, device)`
+
+## Working on it locally
+
+```bash
+npm install
+npm run build              # both bundles
+npm run dev:admin          # watch the React admin
+npm run dev:frontend       # watch the public carousel
+```
+
+Build output lives in `dist/` and is committed to the repo on purpose — that way installing from a release ZIP is plug-and-play, no `npm install` for end users.
+
+## What's next
+
+A handful of things I wanted but refused to block the first release on:
+
+- Click + impression tracking with a small in-admin dashboard
+- Native A/B testing at the campaign level
+- Targeting by device, user role, or page
+- A Gutenberg block (for editors that don't love shortcodes)
+- WP-CLI commands for scripted rollouts
+
+If any of those would actually help you, open an issue and tell me which one — that's how I'll prioritize.
+
+## PRs and bugs
+
+Both welcome. For PRs, open an issue first so we can talk through the approach — saves both of us a round trip. For bugs, please include the WordPress version, PHP version, and active theme; nine times out of ten the weird carousel bug in the wild is a theme leaking CSS.
 
 ## License
 
-[MIT](LICENSE) © Kennedy / Univerbeauty.
+**MIT with the Commons Clause.**
+
+In plain English: download it, install it, modify it, run it on your site (commercial site or not), use it for as many clients as you want — go wild. What you **cannot** do is sell the plugin itself, repackage it under a different name and sell that, include it in a paid bundle, or host it as a paid SaaS product.
+
+If you're using it on your own site or your client's site, you're fine. If you're trying to make money by reselling the plugin itself, you're not — and I'll enforce that.
+
+Copyright (c) 2026 **Kennedy Rodrigues Gomes Teixeira**. All rights reserved. See [LICENSE](LICENSE) for the full text.
+
+— Kennedy / [Univerbeauty](https://github.com/EuKennedy)

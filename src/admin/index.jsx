@@ -1,5 +1,10 @@
-/**
+/*!
  * Univer Smart Carousel — admin entry point.
+ *
+ * Copyright (c) 2026 Kennedy Rodrigues Gomes Teixeira. All rights reserved.
+ * Licensed under MIT with the Commons Clause. Commercial resale prohibited.
+ * See LICENSE in the repository root for full terms.
+ *
  * Mounts the React app onto the WP admin page shell.
  */
 

@@ -6,12 +6,16 @@
  * Version:           1.0.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
- * Author:            Kennedy
+ * Author:            Kennedy Rodrigues Gomes Teixeira
  * Author URI:        https://github.com/EuKennedy
- * License:           MIT
- * License URI:       https://opensource.org/licenses/MIT
+ * License:           MIT with Commons Clause
+ * License URI:       https://github.com/EuKennedy/univer-smart-carousel/blob/main/LICENSE
  * Text Domain:       univer-smart-carousel
  * Domain Path:       /languages
+ *
+ * Copyright (c) 2026 Kennedy Rodrigues Gomes Teixeira. All rights reserved.
+ * Free to use, modify, and distribute. Selling, sublicensing, or repackaging
+ * for commercial resale is strictly prohibited. See LICENSE for full terms.
  *
  * @package Univer\SmartCarousel
  */

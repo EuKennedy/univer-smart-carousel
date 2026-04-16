@@ -1,5 +1,9 @@
-/**
+/*!
  * Univer Smart Carousel — frontend runtime.
+ *
+ * Copyright (c) 2026 Kennedy Rodrigues Gomes Teixeira. All rights reserved.
+ * Licensed under MIT with the Commons Clause. Commercial resale prohibited.
+ * See LICENSE in the repository root for full terms.
  *
  * - Picks up every [data-usc-carousel] container on the page.
  * - Reads its config from data-usc-config (JSON).
