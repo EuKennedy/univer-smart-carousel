@@ -57,8 +57,8 @@ export function defaultSettings() {
 		pause_on_hover: true,
 		border_radius: 16,
 		transition: 'slide',
-		aspect_ratio_desktop: '21/9',
-		aspect_ratio_mobile: '4/5',
+		aspect_ratio_desktop: 'auto',
+		aspect_ratio_mobile: 'auto',
 	};
 }
 

@@ -38,6 +38,7 @@ const NAVIGATION_OPTIONS = [
 ];
 
 const RATIOS = [
+	{ value: 'auto', label: __('Auto — match image', 'univer-smart-carousel') },
 	{ value: '21/9', label: '21 / 9 — cinematic wide' },
 	{ value: '16/9', label: '16 / 9 — widescreen' },
 	{ value: '4/3', label: '4 / 3 — classic' },

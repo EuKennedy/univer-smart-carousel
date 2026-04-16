@@ -137,6 +137,7 @@ final class Translations {
 			'Slides per view (mobile)'  => 'Slides por visualização (mobile)',
 			'Aspect ratio (desktop)' => 'Proporção (desktop)',
 			'Aspect ratio (mobile)'  => 'Proporção (mobile)',
+			'Auto — match image'     => 'Automático — usar a proporção da imagem',
 			'Gap (px)'               => 'Espaçamento (px)',
 			'Border radius (px)'     => 'Borda arredondada (px)',
 
