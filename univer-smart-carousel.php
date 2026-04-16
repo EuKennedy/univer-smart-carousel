@@ -3,7 +3,7 @@
  * Plugin Name:       Univer Smart Carousel
  * Plugin URI:        https://github.com/EuKennedy/univer-smart-carousel
  * Description:       Lightweight, premium, web-vitals-friendly banner carousel for WordPress and WooCommerce. Marketing teams create campaigns and ship banners with a single shortcode — desktop and mobile, fully separated.
- * Version:           1.3.1
+ * Version:           1.3.2
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Kennedy Rodrigues Gomes Teixeira
@@ -22,7 +22,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'USC_VERSION', '1.3.1' );
+define( 'USC_VERSION', '1.3.2' );
 define( 'USC_PLUGIN_FILE', __FILE__ );
 define( 'USC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'USC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

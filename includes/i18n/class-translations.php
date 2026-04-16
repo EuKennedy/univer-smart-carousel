@@ -100,7 +100,6 @@ final class Translations {
 			// Plugin chrome
 			'Smart Carousel'         => 'Carrossel Inteligente',
 			'Open'                   => 'Abrir',
-			'GitHub'                 => 'GitHub',
 			'Settings'               => 'Configurações',
 			'Campaigns'              => 'Carrosseis',
 

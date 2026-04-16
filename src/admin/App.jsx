@@ -133,16 +133,8 @@ export default function App() {
 					</button>
 				</nav>
 
-				<div className="usc-appbar__actions">
-					<a
-						className="usc-link-soft"
-						href="https://github.com/EuKennedy/univer-smart-carousel"
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						{__('GitHub', 'univer-smart-carousel')}
-					</a>
-				</div>
+				<div className="usc-appbar__actions" />
+
 			</header>
 
 			{tab === TAB_CAMPAIGNS ? (
