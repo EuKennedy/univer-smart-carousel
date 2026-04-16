@@ -51,14 +51,14 @@ final class Admin_Loader {
 		wp_enqueue_style(
 			self::STYLE_HANDLE,
 			USC_PLUGIN_URL . 'dist/admin/index.css',
-			[ 'wp-components' ],
+			[],
 			USC_VERSION
 		);
 
 		wp_enqueue_script(
 			self::SCRIPT_HANDLE,
 			USC_PLUGIN_URL . 'dist/admin/index.js',
-			[ 'wp-element', 'wp-i18n', 'wp-api-fetch', 'wp-components' ],
+			[ 'wp-element', 'wp-i18n', 'wp-api-fetch' ],
 			USC_VERSION,
 			true
 		);

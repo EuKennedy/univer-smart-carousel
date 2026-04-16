@@ -36,13 +36,12 @@ export default defineConfig({
 			fileName: () => 'index.js',
 		},
 		rollupOptions: {
-			external: ['@wordpress/element', '@wordpress/i18n', '@wordpress/api-fetch', '@wordpress/components'],
+			external: ['@wordpress/element', '@wordpress/i18n', '@wordpress/api-fetch'],
 			output: {
 				globals: {
 					'@wordpress/element': 'wp.element',
 					'@wordpress/i18n': 'wp.i18n',
 					'@wordpress/api-fetch': 'wp.apiFetch',
-					'@wordpress/components': 'wp.components',
 				},
 				assetFileNames: (info) => {
 					if (info.name && info.name.endsWith('.css')) return 'index.css';
