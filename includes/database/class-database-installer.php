@@ -42,6 +42,14 @@ final class Database_Installer {
 	}
 
 	/**
+	 * Returns prefixed table name for banner groups.
+	 */
+	public static function table_banner_groups(): string {
+		global $wpdb;
+		return $wpdb->prefix . USC_TABLE_BANNER_GROUPS;
+	}
+
+	/**
 	 * Run on activation. Creates tables if missing, stores version.
 	 */
 	public static function install(): void {
@@ -67,7 +75,84 @@ final class Database_Installer {
 			return;
 		}
 		self::create_tables();
+		self::run_pending_migrations( $installed );
 		update_option( self::VERSION_OPTION, USC_DB_VERSION, false );
+	}
+
+	/**
+	 * Schema migrations that dbDelta can't express on its own — adding
+	 * columns to existing tables and back-filling data. Each migration
+	 * should be safe to run multiple times (idempotent).
+	 *
+	 * @param string|false $previous_version The version stored before this upgrade run.
+	 */
+	private static function run_pending_migrations( $previous_version ): void {
+		global $wpdb;
+		$banners = self::table_banners();
+
+		// 1.2.0 — Banner groups feature. Banners pick up group_id +
+		// is_active columns; existing rows get bucketed into a default
+		// group (one per campaign+device pair) so nothing disappears.
+		if ( ! self::column_exists( $banners, 'group_id' ) ) {
+			$wpdb->query( "ALTER TABLE {$banners} ADD COLUMN group_id BIGINT UNSIGNED NULL AFTER campaign_id" ); // phpcs:ignore WordPress.DB
+			$wpdb->query( "ALTER TABLE {$banners} ADD INDEX group_id (group_id)" ); // phpcs:ignore WordPress.DB
+		}
+		if ( ! self::column_exists( $banners, 'is_active' ) ) {
+			$wpdb->query( "ALTER TABLE {$banners} ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER sort_order" ); // phpcs:ignore WordPress.DB
+		}
+
+		// Backfill: any banner that still has NULL group_id needs a group.
+		// Group banners by (campaign_id, device) — those become "Banners"
+		// groups that the user can later rename / split.
+		$orphans = $wpdb->get_results( // phpcs:ignore WordPress.DB
+			"SELECT DISTINCT campaign_id, device FROM {$banners} WHERE group_id IS NULL"
+		);
+
+		if ( $orphans ) {
+			$groups_table = self::table_banner_groups();
+			$now          = current_time( 'mysql', true );
+
+			foreach ( $orphans as $pair ) {
+				$campaign_id = (int) $pair->campaign_id;
+				$device      = (string) $pair->device;
+
+				$wpdb->insert( // phpcs:ignore WordPress.DB
+					$groups_table,
+					[
+						'campaign_id' => $campaign_id,
+						'device'      => $device,
+						'name'        => 'Banners',
+						'is_active'   => 1,
+						'sort_order'  => 0,
+						'created_at'  => $now,
+						'updated_at'  => $now,
+					],
+					[ '%d', '%s', '%s', '%d', '%d', '%s', '%s' ]
+				);
+				$group_id = (int) $wpdb->insert_id;
+
+				$wpdb->query( // phpcs:ignore WordPress.DB
+					$wpdb->prepare(
+						"UPDATE {$banners} SET group_id = %d WHERE campaign_id = %d AND device = %s AND group_id IS NULL",
+						$group_id,
+						$campaign_id,
+						$device
+					)
+				);
+			}
+		}
+	}
+
+	private static function column_exists( string $table, string $column ): bool {
+		global $wpdb;
+		$result = $wpdb->get_var( // phpcs:ignore WordPress.DB
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = %s",
+				$table,
+				$column
+			)
+		);
+		return (int) $result > 0;
 	}
 
 	/**
@@ -101,6 +186,7 @@ final class Database_Installer {
 		$sql_banners = "CREATE TABLE {$banners} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			campaign_id BIGINT UNSIGNED NOT NULL,
+			group_id BIGINT UNSIGNED NULL,
 			device VARCHAR(10) NOT NULL,
 			image_id BIGINT UNSIGNED NOT NULL,
 			link_url VARCHAR(2048) NULL,
@@ -108,9 +194,11 @@ final class Database_Installer {
 			link_rel VARCHAR(64) NULL,
 			alt_text VARCHAR(255) NULL,
 			sort_order INT NOT NULL DEFAULT 0,
+			is_active TINYINT(1) NOT NULL DEFAULT 1,
 			created_at DATETIME NULL DEFAULT NULL,
 			PRIMARY KEY  (id),
 			KEY campaign_device (campaign_id, device, sort_order),
+			KEY group_id (group_id),
 			KEY image_id (image_id)
 		) {$charset_collate};";
 
@@ -136,8 +224,28 @@ final class Database_Installer {
 			KEY active (revoked_at)
 		) {$charset_collate};";
 
+		$banner_groups = self::table_banner_groups();
+
+		// Banner groups: a layer between campaigns and banners. Lets the
+		// user organize banners by sub-campaign ("Black Friday", "Mother's
+		// Day") and toggle whole groups on/off without losing the banners.
+		$sql_banner_groups = "CREATE TABLE {$banner_groups} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			campaign_id BIGINT UNSIGNED NOT NULL,
+			device VARCHAR(10) NOT NULL,
+			name VARCHAR(191) NOT NULL,
+			is_active TINYINT(1) NOT NULL DEFAULT 1,
+			sort_order INT NOT NULL DEFAULT 0,
+			created_at DATETIME NULL DEFAULT NULL,
+			updated_at DATETIME NULL DEFAULT NULL,
+			PRIMARY KEY  (id),
+			KEY campaign_device (campaign_id, device, sort_order),
+			KEY active (campaign_id, is_active)
+		) {$charset_collate};";
+
 		dbDelta( $sql_campaigns );
 		dbDelta( $sql_banners );
 		dbDelta( $sql_api_keys );
+		dbDelta( $sql_banner_groups );
 	}
 }
