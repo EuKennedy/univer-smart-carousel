@@ -42,6 +42,9 @@ final class Plugin {
 		// Run database upgrades opportunistically (cheap, idempotent).
 		add_action( 'init', [ Database\Database_Installer::class, 'maybe_upgrade' ], 1 );
 
+		// Translations have to be wired up before the first __() call from
+		// any of the other subsystems, hence the early registration here.
+		$this->subsystems['i18n']      = new I18n\Translations();
 		$this->subsystems['admin']     = new Admin\Admin_Loader();
 		$this->subsystems['frontend']  = new Frontend\Frontend_Loader();
 		$this->subsystems['shortcode'] = new Shortcode\Shortcode_Handler();

@@ -64,14 +64,16 @@ final class Admin_Loader {
 		);
 
 		$config = [
-			'restUrl'    => esc_url_raw( rest_url( USC_REST_NAMESPACE . '/' ) ),
-			'nonce'      => wp_create_nonce( 'wp_rest' ),
-			'pluginUrl'  => USC_PLUGIN_URL,
-			'pluginVer'  => USC_VERSION,
-			'adminUrl'   => esc_url_raw( admin_url() ),
-			'siteUrl'   => esc_url_raw( home_url() ),
-			'capability' => USC_ADMIN_CAPABILITY,
-			'spvOptions' => [ 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5 ],
+			'restUrl'      => esc_url_raw( rest_url( USC_REST_NAMESPACE . '/' ) ),
+			'nonce'        => wp_create_nonce( 'wp_rest' ),
+			'pluginUrl'    => USC_PLUGIN_URL,
+			'pluginVer'    => USC_VERSION,
+			'adminUrl'     => esc_url_raw( admin_url() ),
+			'siteUrl'      => esc_url_raw( home_url() ),
+			'capability'   => USC_ADMIN_CAPABILITY,
+			'spvOptions'   => [ 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5 ],
+			'language'     => \Univer\SmartCarousel\I18n\Translations::current_language(),
+			'translations' => \Univer\SmartCarousel\I18n\Translations::js_locale_data(),
 		];
 
 		wp_add_inline_script(

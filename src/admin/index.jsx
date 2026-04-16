@@ -9,10 +9,22 @@
  */
 
 import { createRoot, render } from '@wordpress/element';
+import { setLocaleData } from '@wordpress/i18n';
 import App from './App';
 import './styles/index.css';
 
 const ROOT_ID = 'usc-admin-root';
+
+// If the user picked a non-English language in Settings, the PHP side ships
+// the dictionary inline on USC_CFG.translations. Apply it before any
+// component calls __() for the first time.
+const cfg = window.USC_CFG || {};
+if (cfg.translations && cfg.translations.locale_data) {
+	const data = cfg.translations.locale_data['univer-smart-carousel'];
+	if (data) {
+		setLocaleData(data, 'univer-smart-carousel');
+	}
+}
 
 function mount() {
 	const el = document.getElementById(ROOT_ID);
