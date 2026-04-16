@@ -21,9 +21,10 @@ The slug after the underscore matches the campaign name you typed in the admin. 
 
 - A campaign editor under **Smart Carousel** in the WordPress sidebar
 - Two device tabs — pick images from the media library, drag to reorder, set link/target/alt per banner
-- Per-campaign knobs: slides per view (1 through 5, including 1.5/2.5/3.5/4.5), aspect ratio, gap, border radius, autoplay + delay, loop, dots, arrows, progress bar, pause on hover
+- Per-campaign knobs: slides per view (1 through 5, including 1.5/2.5/3.5/4.5), aspect ratio, gap, border radius, autoplay + delay, loop, navigation style (none/dots/arrows), progress bar, pause on hover, slide/fade transition
 - Start/end dates so a campaign turns itself on and off (handy for set-and-forget Black Friday rollouts)
 - Draft / Active / Paused status
+- Plugin-wide **Settings tab** with a language switcher (English / Português Brasil) — flips the entire admin and the on-page accessibility text in one click
 
 What's **not** in there yet: click tracking, A/B testing, role/page/device targeting. See the bottom — those are coming.
 
