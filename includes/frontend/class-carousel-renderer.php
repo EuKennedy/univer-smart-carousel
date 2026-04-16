@@ -33,9 +33,38 @@ final class Carousel_Renderer {
 	}
 
 	public static function render( array $campaign, string $device ): string {
-		$device  = Campaign_Repository::sanitize_device( $device );
-		$banners = array_values( array_filter( $campaign['banners'] ?? [], static function ( $b ) use ( $device ) {
-			return ( $b['device'] ?? '' ) === $device && ! empty( $b['image'] );
+		$device = Campaign_Repository::sanitize_device( $device );
+
+		// Build the index of active groups for this device. Banners whose
+		// group is paused (or whose own is_active is false) are skipped.
+		// Legacy banners with group_id = 0 (pre-1.2.0 migration not yet
+		// run) are kept active by default — fail open, never silent.
+		$groups = $campaign['groups'] ?? [];
+		$active_group_ids = [];
+		foreach ( $groups as $g ) {
+			if ( ( $g['device'] ?? '' ) !== $device ) {
+				continue;
+			}
+			if ( ! empty( $g['is_active'] ) ) {
+				$active_group_ids[ (int) $g['id'] ] = true;
+			}
+		}
+
+		$banners = array_values( array_filter( $campaign['banners'] ?? [], static function ( $b ) use ( $device, $active_group_ids ) {
+			if ( ( $b['device'] ?? '' ) !== $device ) {
+				return false;
+			}
+			if ( empty( $b['image'] ) ) {
+				return false;
+			}
+			if ( array_key_exists( 'is_active', $b ) && ! $b['is_active'] ) {
+				return false;
+			}
+			$group_id = (int) ( $b['group_id'] ?? 0 );
+			if ( $group_id > 0 && empty( $active_group_ids[ $group_id ] ) ) {
+				return false;
+			}
+			return true;
 		} ) );
 
 		if ( empty( $banners ) ) {
