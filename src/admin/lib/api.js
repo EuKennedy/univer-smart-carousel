@@ -40,3 +40,8 @@ export const Campaigns = {
 	update: (id, data) => request(`/campaigns/${id}`, { method: 'PUT', data }),
 	remove: (id) => request(`/campaigns/${id}`, { method: 'DELETE' }),
 };
+
+export const Settings = {
+	get: () => request('/settings'),
+	update: (data) => request('/settings', { method: 'PUT', data }),
+};

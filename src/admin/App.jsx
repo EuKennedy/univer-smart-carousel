@@ -1,17 +1,24 @@
 /**
  * Univer Smart Carousel — Admin App root.
- * Two-pane layout: sidebar list + editor.
+ *
+ * Top-level tab switcher: Campaigns (list + editor) and Settings.
  */
 
 import { useEffect, useState, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import CampaignList from './components/CampaignList';
 import CampaignEditor from './components/CampaignEditor';
+import SettingsPage from './components/SettingsPage';
 import { ToastHost, EmptyState, Button, Spinner, toast } from './components/ui';
 import { Campaigns as API } from './lib/api';
-import { emptyCampaign } from './lib/utils';
+import { emptyCampaign, classNames } from './lib/utils';
+
+const TAB_CAMPAIGNS = 'campaigns';
+const TAB_SETTINGS = 'settings';
 
 export default function App() {
+	const [tab, setTab] = useState(TAB_CAMPAIGNS);
+
 	const [campaigns, setCampaigns] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState('');
@@ -104,6 +111,28 @@ export default function App() {
 					<span className="usc-appbar__title">Univer Smart Carousel</span>
 					<span className="usc-appbar__by">by Univerbeauty</span>
 				</div>
+
+				<nav className="usc-appbar__tabs" role="tablist">
+					<button
+						type="button"
+						role="tab"
+						aria-selected={tab === TAB_CAMPAIGNS}
+						className={classNames('usc-appbar__tab', tab === TAB_CAMPAIGNS && 'is-active')}
+						onClick={() => setTab(TAB_CAMPAIGNS)}
+					>
+						{__('Campaigns', 'univer-smart-carousel')}
+					</button>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={tab === TAB_SETTINGS}
+						className={classNames('usc-appbar__tab', tab === TAB_SETTINGS && 'is-active')}
+						onClick={() => setTab(TAB_SETTINGS)}
+					>
+						{__('Settings', 'univer-smart-carousel')}
+					</button>
+				</nav>
+
 				<div className="usc-appbar__actions">
 					<a
 						className="usc-link-soft"
@@ -116,56 +145,60 @@ export default function App() {
 				</div>
 			</header>
 
-			<div className="usc-app__body">
-				<CampaignList
-					campaigns={campaigns}
-					loading={loading}
-					activeId={activeId}
-					hasDraft={!!draft}
-					onSelect={onSelect}
-					onCreate={onCreate}
-					onSearch={onSearch}
-					search={search}
-				/>
+			{tab === TAB_CAMPAIGNS ? (
+				<div className="usc-app__body">
+					<CampaignList
+						campaigns={campaigns}
+						loading={loading}
+						activeId={activeId}
+						hasDraft={!!draft}
+						onSelect={onSelect}
+						onCreate={onCreate}
+						onSearch={onSearch}
+						search={search}
+					/>
 
-				<div className="usc-app__main">
-					{!draft && !loading && campaigns.length > 0 && (
-						<EmptyState
-							icon={
-								<svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
-									<rect x="3" y="6" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.4" />
-									<path d="M7 10v4M17 10v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-								</svg>
-							}
-							title={__('Select a campaign', 'univer-smart-carousel')}
-							description={__(
-								'Pick a campaign on the left, or create a new one.',
-								'univer-smart-carousel'
-							)}
-							action={
-								<Button onClick={onCreate}>{__('New campaign', 'univer-smart-carousel')}</Button>
-							}
-						/>
-					)}
+					<div className="usc-app__main">
+						{!draft && !loading && campaigns.length > 0 && (
+							<EmptyState
+								icon={
+									<svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
+										<rect x="3" y="6" width="18" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+										<path d="M7 10v4M17 10v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+									</svg>
+								}
+								title={__('Select a campaign', 'univer-smart-carousel')}
+								description={__(
+									'Pick a campaign on the left, or create a new one.',
+									'univer-smart-carousel'
+								)}
+								action={
+									<Button onClick={onCreate}>{__('New campaign', 'univer-smart-carousel')}</Button>
+								}
+							/>
+						)}
 
-					{!draft && loading && (
-						<div className="usc-app__loading">
-							<Spinner />
-							<span>{__('Loading…', 'univer-smart-carousel')}</span>
-						</div>
-					)}
+						{!draft && loading && (
+							<div className="usc-app__loading">
+								<Spinner />
+								<span>{__('Loading…', 'univer-smart-carousel')}</span>
+							</div>
+						)}
 
-					{draft && (
-						<CampaignEditor
-							campaign={draft}
-							onChange={setDraft}
-							onSave={onSave}
-							onDelete={onDelete}
-							saving={saving}
-						/>
-					)}
+						{draft && (
+							<CampaignEditor
+								campaign={draft}
+								onChange={setDraft}
+								onSave={onSave}
+								onDelete={onDelete}
+								saving={saving}
+							/>
+						)}
+					</div>
 				</div>
-			</div>
+			) : (
+				<SettingsPage />
+			)}
 
 			<ToastHost />
 		</div>
