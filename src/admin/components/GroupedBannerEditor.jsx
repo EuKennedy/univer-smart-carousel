@@ -20,7 +20,7 @@ import { __, sprintf } from '@wordpress/i18n';
 import { Button, IconButton, Input, Select, Modal, toast } from './ui';
 import { pickImages } from '../lib/media';
 import { classNames } from '../lib/utils';
-import { Groups as GroupsAPI, Banners as BannersAPI } from '../lib/api';
+import { Groups as GroupsAPI, Banners as BannersAPI, Campaigns as CampaignsAPI } from '../lib/api';
 
 const TARGET_OPTIONS = [
 	{ value: '_self', label: __('Same tab', 'univer-smart-carousel') },
@@ -44,6 +44,25 @@ export default function GroupedBannerEditor({
 	const deviceGroups = (groups || []).filter((g) => g.device === device);
 	const bannersByGroup = (groupId) =>
 		(banners || []).filter((b) => b.device === device && b.group_id === groupId);
+
+	// Reload the authoritative state from the server. We call this after
+	// any structural mutation (adding/deleting a banner, deleting a group,
+	// reordering) rather than juggling fragile local diffs. Keeps state
+	// impossible to desync, at the cost of one extra round trip per op —
+	// which is fine, they're infrequent. Toggle / rename / text-field
+	// edits stay eager-optimistic.
+	const refreshCampaign = async () => {
+		if (!campaignId) return;
+		try {
+			const fresh = await CampaignsAPI.get(campaignId);
+			onChange({
+				groups: fresh.groups || [],
+				banners: fresh.banners || [],
+			});
+		} catch (err) {
+			toast(err?.message || __('Failed to refresh.', 'univer-smart-carousel'), 'error');
+		}
+	};
 
 	const updateGroupLocally = (gid, patch) => {
 		onChange({
@@ -75,11 +94,11 @@ export default function GroupedBannerEditor({
 		}
 		setCreating(true);
 		try {
-			const created = await GroupsAPI.create(campaignId, {
+			await GroupsAPI.create(campaignId, {
 				device,
 				name: __('New group', 'univer-smart-carousel'),
 			});
-			onChange({ groups: [...(groups || []), created] });
+			await refreshCampaign();
 		} catch (err) {
 			toast(err?.message || __('Failed to create group.', 'univer-smart-carousel'), 'error');
 		} finally {
@@ -116,7 +135,7 @@ export default function GroupedBannerEditor({
 		if (!target) return;
 		try {
 			await GroupsAPI.remove(target.id);
-			removeGroupLocally(target.id);
+			await refreshCampaign();
 			setConfirmDeleteGroup(null);
 			toast(__('Group deleted.', 'univer-smart-carousel'), 'success');
 		} catch (err) {
@@ -125,34 +144,45 @@ export default function GroupedBannerEditor({
 	};
 
 	const onAddBannersToGroup = async (group) => {
+		let items;
 		try {
-			const items = await pickImages({
+			items = await pickImages({
 				multiple: true,
 				title:
 					device === 'desktop'
 						? __('Select desktop banners', 'univer-smart-carousel')
 						: __('Select mobile banners', 'univer-smart-carousel'),
 			});
-			const created = [];
-			for (const img of items) {
-				const updatedCampaign = await GroupsAPI.addBanner(group.id, {
+		} catch (err) {
+			console.error(err);
+			return;
+		}
+
+		if (!items || items.length === 0) return;
+
+		// Fire all adds sequentially — server needs them in order to get
+		// the sort_order increments right. Any individual failure surfaces
+		// via toast but doesn't block the rest.
+		for (const img of items) {
+			try {
+				await GroupsAPI.addBanner(group.id, {
 					image_id: img.id,
 					alt_text: img.alt || '',
 				});
-				// addBanner returns the whole hydrated campaign — pluck the
-				// new banner(s) for this group from it.
-				const fresh = (updatedCampaign.banners || []).filter(
-					(b) => b.group_id === group.id
+			} catch (err) {
+				toast(
+					err?.message || __('Failed to add banner.', 'univer-smart-carousel'),
+					'error'
 				);
-				created.push(...fresh);
 			}
-			// Replace this group's banners in the parent state with the
-			// freshest server copy (covers ordering + image hydration).
-			const without = (banners || []).filter((b) => b.group_id !== group.id);
-			onChange({ banners: [...without, ...created] });
-		} catch (err) {
-			console.error(err);
 		}
+
+		// Single authoritative refresh — the server already holds the full
+		// truth (every insert ran against a fresh MAX(sort_order)).
+		// This replaces the previous approach of diff-ing local state,
+		// which could duplicate banners when the addBanner response was
+		// re-folded in across iterations.
+		await refreshCampaign();
 	};
 
 	const onToggleBanner = async (banner) => {
@@ -171,7 +201,7 @@ export default function GroupedBannerEditor({
 		if (!target) return;
 		try {
 			await BannersAPI.remove(target.id);
-			removeBannerLocally(target.id);
+			await refreshCampaign();
 			setConfirmDeleteBanner(null);
 		} catch (err) {
 			toast(err?.message || __('Failed to delete banner.', 'univer-smart-carousel'), 'error');
