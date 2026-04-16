@@ -53,6 +53,16 @@ final class Campaign_Repository {
 			// card needs the same height regardless of source dimensions.
 			'aspect_ratio_desktop'    => 'auto',
 			'aspect_ratio_mobile'     => 'auto',
+
+			// Image optimization — per-carousel. 'image_optimization' is
+			// the master switch; the other four only take effect while
+			// it's on. Serving the original upload unchanged is the
+			// fallback when it's off.
+			'image_optimization'      => true,
+			'image_quality'           => 82,   // JPEG quality 1-100
+			'image_webp'              => true, // serve WebP when the host can encode it
+			'image_max_width_desktop' => 1920,
+			'image_max_width_mobile'  => 750,
 		];
 	}
 
@@ -88,6 +98,20 @@ final class Campaign_Repository {
 		// Aspect ratios accept "W/H" pattern with reasonable bounds; fallback to defaults.
 		$out['aspect_ratio_desktop'] = self::sanitize_ratio( $input['aspect_ratio_desktop'] ?? '', $defaults['aspect_ratio_desktop'] );
 		$out['aspect_ratio_mobile']  = self::sanitize_ratio( $input['aspect_ratio_mobile'] ?? '', $defaults['aspect_ratio_mobile'] );
+
+		// Image optimization knobs. Bounds picked conservatively:
+		// quality 40 is noticeable loss, 95 is "practically lossless";
+		// widths below 400 break hero banners, above 3840 defeats the
+		// purpose of optimization entirely.
+		$out['image_optimization']      = array_key_exists( 'image_optimization', $input )
+			? ! empty( $input['image_optimization'] )
+			: $defaults['image_optimization'];
+		$out['image_webp']              = array_key_exists( 'image_webp', $input )
+			? ! empty( $input['image_webp'] )
+			: $defaults['image_webp'];
+		$out['image_quality']           = max( 40, min( 95, (int) ( $input['image_quality'] ?? $defaults['image_quality'] ) ) );
+		$out['image_max_width_desktop'] = max( 400, min( 3840, (int) ( $input['image_max_width_desktop'] ?? $defaults['image_max_width_desktop'] ) ) );
+		$out['image_max_width_mobile']  = max( 320, min( 1536, (int) ( $input['image_max_width_mobile'] ?? $defaults['image_max_width_mobile'] ) ) );
 
 		return $out;
 	}
