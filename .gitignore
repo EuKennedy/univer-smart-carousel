@@ -1,0 +1,48 @@
+# --- Dependencies ---
+node_modules/
+vendor/
+
+# --- Build artifacts (we DO commit dist/ for plugin distribution) ---
+.cache/
+.parcel-cache/
+.vite/
+
+# --- Editor / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# --- Logs ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# --- Env / secrets (NEVER commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets.json
+credentials.json
+
+# --- Local WordPress noise ---
+wp-config.php
+wp-content/debug.log
+
+# --- Packaged ZIPs (built on release) ---
+*.zip
+
+# --- Local test artifacts ---
+coverage/
+.phpunit.result.cache
+.phpunit.cache/
+
+# --- Claude / AI tooling ---
+.claude/

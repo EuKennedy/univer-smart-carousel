@@ -1,0 +1,28 @@
+{
+  "name": "univer-smart-carousel",
+  "version": "1.0.0",
+  "description": "Lightweight, premium banner carousel for WordPress and WooCommerce. Built by Univerbeauty.",
+  "private": true,
+  "license": "MIT",
+  "author": "Kennedy",
+  "homepage": "https://github.com/EuKennedy/univer-smart-carousel",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EuKennedy/univer-smart-carousel.git"
+  },
+  "scripts": {
+    "dev:admin": "vite build --watch --config vite.admin.config.js",
+    "dev:frontend": "vite build --watch --config vite.frontend.config.js",
+    "build:admin": "vite build --config vite.admin.config.js && node tools/silence.js dist/admin",
+    "build:frontend": "vite build --config vite.frontend.config.js && node tools/silence.js dist/frontend",
+    "build": "npm run build:admin && npm run build:frontend"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.10"
+  },
+  "dependencies": {
+    "embla-carousel": "^8.5.1",
+    "embla-carousel-autoplay": "^8.5.1"
+  }
+}
