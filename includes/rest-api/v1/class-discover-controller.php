@@ -18,7 +18,6 @@
 
 namespace Univer\SmartCarousel\Rest_Api\V1;
 
-use Univer\SmartCarousel\Api\Api_Auth_Middleware;
 use Univer\SmartCarousel\Database\Campaign_Repository;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -70,13 +69,15 @@ final class Discover_Controller {
 			],
 
 			'concepts' => [
-				'campaign' => 'A named set of banners with shared layout and behavior settings. Each campaign exposes two shortcodes — one for desktop, one for mobile — that you paste anywhere on the site.',
-				'banner'   => 'One image inside a campaign. Belongs to either the desktop or mobile device set, has a destination URL, alt text, and an order within its device set.',
-				'shortcode' => 'Two are generated per campaign: [carouseldesktop_<slug>] and [carouselmobile_<slug>]. They render only while status === "active".',
+				'carousel'  => 'Top-level container. The plugin internally calls this a "campaign" (and the original /campaigns endpoints still work) — both names address the same resource. Each carousel exposes two shortcodes — one for desktop, one for mobile.',
+				'group'     => 'A named bucket of banners inside a carousel. Scoped to a single device. Has its own is_active toggle so marketing can pause a sub-campaign without losing banners.',
+				'banner'    => 'One image inside a group. Has a destination URL, alt text, sort order within the group, and its own is_active toggle.',
+				'shortcode' => 'Two per carousel: [carouseldesktop_<slug>] and [carouselmobile_<slug>]. Render only while the carousel status === "active" AND the banner\'s group is active AND the banner itself is active.',
 			],
 
 			'models' => [
 				'campaign' => $this->describe_campaign(),
+				'group'    => $this->describe_group(),
 				'banner'   => $this->describe_banner(),
 				'settings' => $this->describe_settings(),
 				'api_key'  => $this->describe_api_key(),
@@ -145,12 +146,29 @@ final class Discover_Controller {
 		];
 	}
 
+	private function describe_group(): array {
+		return [
+			'description' => 'A named bucket of banners inside a carousel, scoped to a single device.',
+			'fields'      => [
+				'id'          => [ 'type' => 'integer', 'readonly' => true ],
+				'campaign_id' => [ 'type' => 'integer', 'readonly' => true ],
+				'device'      => [ 'type' => 'enum', 'values' => [ 'desktop', 'mobile' ], 'required' => true ],
+				'name'        => [ 'type' => 'string', 'required' => true, 'example' => 'Black Friday' ],
+				'is_active'   => [ 'type' => 'boolean', 'default' => true, 'note' => 'Flip this to false to hide every banner in the group without deleting them.' ],
+				'sort_order'  => [ 'type' => 'integer', 'note' => 'Order among groups within the same (campaign, device).' ],
+				'created_at'  => [ 'type' => 'datetime', 'readonly' => true ],
+				'updated_at'  => [ 'type' => 'datetime', 'readonly' => true ],
+			],
+		];
+	}
+
 	private function describe_banner(): array {
 		return [
-			'description' => 'One image inside a campaign, scoped to either desktop or mobile.',
+			'description' => 'One image inside a group. The group it lives in (group_id) decides which carousel and which device tab it renders under.',
 			'fields' => [
 				'id'           => [ 'type' => 'integer', 'readonly' => true ],
 				'campaign_id'  => [ 'type' => 'integer', 'readonly' => true ],
+				'group_id'     => [ 'type' => 'integer', 'note' => 'When omitted on POST, the banner lands in the campaign+device\'s default group (one is created if needed).' ],
 				'device'       => [ 'type' => 'enum', 'values' => [ 'desktop', 'mobile' ], 'required' => true ],
 				'image_id'     => [ 'type' => 'integer', 'required' => true, 'note' => 'WP attachment ID. Upload via the Media Library REST API first.' ],
 				'image'        => [ 'type' => 'object', 'readonly' => true, 'shape' => '{ id, url, width, height, srcset, sizes, alt }' ],
@@ -158,7 +176,8 @@ final class Discover_Controller {
 				'link_target'  => [ 'type' => 'enum', 'values' => [ '_self', '_blank' ], 'default' => '_self' ],
 				'link_rel'     => [ 'type' => 'string|null', 'note' => 'Auto-set to "noopener noreferrer" when target is _blank, unless overridden.' ],
 				'alt_text'     => [ 'type' => 'string|null', 'note' => 'Falls back to the attachment\'s alt text if empty.' ],
-				'sort_order'   => [ 'type' => 'integer', 'note' => 'Auto-assigned in send order; pass an explicit array via /campaigns/{id} PUT to control ordering.' ],
+				'sort_order'   => [ 'type' => 'integer', 'note' => 'Order within the group. Auto-assigned to next position on append; PUT /banners/{bid} {sort_order:N} to move.' ],
+				'is_active'    => [ 'type' => 'boolean', 'default' => true, 'note' => 'Per-banner pause toggle.' ],
 				'created_at'   => [ 'type' => 'datetime', 'readonly' => true ],
 			],
 		];
@@ -310,6 +329,63 @@ final class Discover_Controller {
 				'returns'  => 'campaign',
 			],
 
+			// Groups
+			[
+				'method'   => 'GET',
+				'path'     => '/campaigns/{id}/groups',
+				'auth'     => 'read',
+				'summary'  => 'List groups inside a campaign. Optional ?device=desktop|mobile filter.',
+				'returns'  => 'array<group>',
+			],
+			[
+				'method'   => 'POST',
+				'path'     => '/campaigns/{id}/groups',
+				'auth'     => 'write',
+				'summary'  => 'Create a group. Body: { device, name }.',
+				'returns'  => 'group',
+			],
+			[
+				'method'   => 'GET',
+				'path'     => '/groups/{gid}',
+				'auth'     => 'read',
+				'summary'  => 'Get a single group.',
+				'returns'  => 'group',
+			],
+			[
+				'method'   => 'PUT',
+				'path'     => '/groups/{gid}',
+				'auth'     => 'write',
+				'summary'  => 'Partial update — name, is_active (pause/resume), sort_order.',
+				'returns'  => 'group',
+			],
+			[
+				'method'   => 'DELETE',
+				'path'     => '/groups/{gid}',
+				'auth'     => 'write',
+				'summary'  => 'Delete the group AND all its banners (cascade).',
+			],
+			[
+				'method'   => 'POST',
+				'path'     => '/groups/{gid}/banners',
+				'auth'     => 'write',
+				'summary'  => 'Append one banner to a group. Body: { image_id, link_url?, alt_text?, link_target? }.',
+				'returns'  => 'campaign',
+			],
+
+			// Per-banner ops
+			[
+				'method'   => 'PUT',
+				'path'     => '/banners/{bid}',
+				'auth'     => 'write',
+				'summary'  => 'Partial update of a single banner — toggle is_active, link, target, alt, sort_order, group.',
+			],
+			[
+				'method'   => 'DELETE',
+				'path'     => '/banners/{bid}',
+				'auth'     => 'write',
+				'summary'  => 'Delete a single banner.',
+			],
+
 			// Settings
 			[
 				'method'   => 'GET',
@@ -322,6 +398,14 @@ final class Discover_Controller {
 				'path'     => '/settings',
 				'auth'     => 'write',
 				'summary'  => 'Partial update of plugin-wide settings.',
+			],
+
+			// Aliases
+			[
+				'method'   => '*',
+				'path'     => '/carousels/*',
+				'auth'     => 'inherit',
+				'summary'  => 'Alias for /campaigns/*. The product calls these "carousels"; the data layer kept "campaign" for backwards compatibility. Both work, identical responses.',
 			],
 		];
 	}

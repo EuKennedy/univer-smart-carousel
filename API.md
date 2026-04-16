@@ -73,13 +73,37 @@ Base URL: `https://your-site.com/wp-json/usc/v1`
 | POST   | `/campaigns/{id}/activate` | write | Set `status = active`. |
 | POST   | `/campaigns/{id}/deactivate` | write | Set `status = paused`. |
 
-### Banners
+### Banners (legacy nested routes)
 
 | Method | Path | Scope | Description |
 | --- | --- | --- | --- |
 | GET    | `/campaigns/{id}/banners` | read | List banners. Query: `?device=desktop\|mobile`. |
 | POST   | `/campaigns/{id}/banners` | write | Append a banner. Body: `{ device, image_id, link_url?, alt_text? }`. |
 | DELETE | `/campaigns/{id}/banners/{bid}` | write | Remove one banner. |
+
+### Groups
+
+| Method | Path | Scope | Description |
+| --- | --- | --- | --- |
+| GET    | `/campaigns/{id}/groups` | read | List groups inside a carousel. Query: `?device=…`. |
+| POST   | `/campaigns/{id}/groups` | write | Create a group. Body: `{ device, name }`. |
+| GET    | `/groups/{gid}` | read | Get a single group. |
+| PUT    | `/groups/{gid}` | write | Partial update — `name`, `is_active` (pause/resume), `sort_order`. |
+| DELETE | `/groups/{gid}` | write | Delete + cascade banners. |
+| POST   | `/groups/{gid}/banners` | write | Append a banner to the group. Body: `{ image_id, link_url?, alt_text?, link_target? }`. |
+
+### Per-banner ops
+
+| Method | Path | Scope | Description |
+| --- | --- | --- | --- |
+| PUT    | `/banners/{bid}` | write | Partial — toggle `is_active`, change `link_url`, `link_target`, `alt_text`, `sort_order`, `group_id`. |
+| DELETE | `/banners/{bid}` | write | Remove a single banner. |
+
+### Aliases
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `*` | `/carousels/*` | Alias for `/campaigns/*` — same controller, same payloads. The product calls these "carousels"; the data layer kept the original "campaign" name for backwards compatibility. |
 
 ### Settings
 
@@ -156,6 +180,55 @@ curl -X PUT \
   -H "Content-Type: application/json" \
   -d '{"settings": {"navigation": "dots"}}' \
   https://your-site.com/wp-json/usc/v1/campaigns/123
+```
+
+### Create a group, then add banners to it
+
+```bash
+# 1. Create a "Black Friday" group on the desktop tab
+curl -X POST \
+  -H "Authorization: Bearer usc_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"device":"desktop","name":"Black Friday"}' \
+  https://your-site.com/wp-json/usc/v1/campaigns/123/groups
+# → { id: 7, ... }
+
+# 2. Append a banner
+curl -X POST \
+  -H "Authorization: Bearer usc_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"image_id":1234,"link_url":"https://example.com/promo","alt_text":"BF up to 70% off"}' \
+  https://your-site.com/wp-json/usc/v1/groups/7/banners
+```
+
+### Pause a whole group during a swap
+
+```bash
+# Pause
+curl -X PUT \
+  -H "Authorization: Bearer usc_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"is_active": false}' \
+  https://your-site.com/wp-json/usc/v1/groups/7
+
+# …swap banners…
+
+# Resume
+curl -X PUT \
+  -H "Authorization: Bearer usc_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"is_active": true}' \
+  https://your-site.com/wp-json/usc/v1/groups/7
+```
+
+### Toggle one banner without affecting the rest
+
+```bash
+curl -X PUT \
+  -H "Authorization: Bearer usc_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"is_active": false}' \
+  https://your-site.com/wp-json/usc/v1/banners/45
 ```
 
 `PUT` is partial. Sending `{"settings": {"navigation": "dots"}}` flips just the navigation style — name, slug, dates, banners, and every other setting are left alone.
