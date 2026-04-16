@@ -862,11 +862,42 @@ select.usc-input {
 	border: 1px solid var(--usc-color-border);
 	border-radius: var(--usc-radius-md);
 	overflow: hidden;
-	transition: opacity 160ms ease;
+	transition: opacity 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .usc-group.is-paused {
 	opacity: 0.55;
+}
+
+.usc-group.is-dragging {
+	opacity: 0.35;
+}
+
+.usc-group.is-drop-target {
+	box-shadow: 0 0 0 2px var(--usc-color-accent);
+	transform: translateY(-1px);
+}
+
+.usc-group__handle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--usc-color-text-subtle);
+	cursor: grab;
+	padding: 6px 4px;
+	border-radius: var(--usc-radius-sm);
+	margin-left: -4px;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.usc-group__handle:hover {
+	color: var(--usc-color-text);
+	background: var(--usc-color-surface);
+}
+
+.usc-group__handle:active {
+	cursor: grabbing;
 }
 
 .usc-group__head {

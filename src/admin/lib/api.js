@@ -59,6 +59,8 @@ export const Groups = {
 	update: (gid, data) => request(`/groups/${gid}`, { method: 'PUT', data }),
 	remove: (gid) => request(`/groups/${gid}`, { method: 'DELETE' }),
 	addBanner: (gid, data) => request(`/groups/${gid}/banners`, { method: 'POST', data }),
+	reorder: (campaignId, data) =>
+		request(`/campaigns/${campaignId}/groups/reorder`, { method: 'POST', data }),
 };
 
 export const Banners = {

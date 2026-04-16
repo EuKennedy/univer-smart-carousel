@@ -40,6 +40,8 @@ export default function GroupedBannerEditor({
 	const [confirmDeleteGroup, setConfirmDeleteGroup] = useState(null);
 	const [confirmDeleteBanner, setConfirmDeleteBanner] = useState(null);
 	const [creating, setCreating] = useState(false);
+	const [dragGid, setDragGid] = useState(null);
+	const [dropTargetGid, setDropTargetGid] = useState(null);
 
 	const deviceGroups = (groups || []).filter((g) => g.device === device);
 	const bannersByGroup = (groupId) =>
@@ -208,6 +210,68 @@ export default function GroupedBannerEditor({
 		}
 	};
 
+	// ---------- Drag-to-reorder groups ----------
+	//
+	// HTML5 drag API. We track the id being dragged and the id we're
+	// hovering over, then on drop we recompute the ordered list of gids
+	// for the current device and ship it to the reorder endpoint.
+	const onGroupDragStart = (group) => (e) => {
+		setDragGid(group.id);
+		// `effectAllowed = 'move'` plus an explicit text payload keeps
+		// Firefox from swallowing the drag.
+		if (e.dataTransfer) {
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', String(group.id));
+		}
+	};
+
+	const onGroupDragOver = (group) => (e) => {
+		if (dragGid === null || dragGid === group.id) return;
+		e.preventDefault();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+		if (dropTargetGid !== group.id) setDropTargetGid(group.id);
+	};
+
+	const onGroupDragLeave = (group) => () => {
+		if (dropTargetGid === group.id) setDropTargetGid(null);
+	};
+
+	const onGroupDragEnd = () => {
+		setDragGid(null);
+		setDropTargetGid(null);
+	};
+
+	const onGroupDrop = (target) => async (e) => {
+		e.preventDefault();
+		const sourceId = dragGid;
+		setDragGid(null);
+		setDropTargetGid(null);
+		if (!sourceId || sourceId === target.id) return;
+
+		const current = deviceGroups.map((g) => g.id);
+		const from = current.indexOf(sourceId);
+		const to = current.indexOf(target.id);
+		if (from === -1 || to === -1) return;
+
+		const reordered = [...current];
+		reordered.splice(from, 1);
+		reordered.splice(to, 0, sourceId);
+
+		// Optimistic local update — reorder the groups array to match.
+		const newGroups = [...(groups || [])];
+		const byId = Object.fromEntries(newGroups.map((g) => [g.id, g]));
+		const otherDevice = newGroups.filter((g) => g.device !== device);
+		const thisDevice = reordered.map((id, idx) => ({ ...byId[id], sort_order: idx }));
+		onChange({ groups: [...otherDevice, ...thisDevice] });
+
+		try {
+			await GroupsAPI.reorder(campaignId, { device, order: reordered });
+		} catch (err) {
+			toast(err?.message || __('Failed to reorder.', 'univer-smart-carousel'), 'error');
+			await refreshCampaign();
+		}
+	};
+
 	const onUpdateBannerField = (banner, patch) => {
 		// Optimistic local + debounce-ish save: just fire-and-forget the
 		// PUT. Worst case it errors and the next action will reload.
@@ -258,10 +322,30 @@ export default function GroupedBannerEditor({
 							className={classNames(
 								'usc-group',
 								!group.is_active && 'is-paused',
-								isCollapsed && 'is-collapsed'
+								isCollapsed && 'is-collapsed',
+								dragGid === group.id && 'is-dragging',
+								dropTargetGid === group.id && 'is-drop-target'
 							)}
+							onDragOver={onGroupDragOver(group)}
+							onDragLeave={onGroupDragLeave(group)}
+							onDrop={onGroupDrop(group)}
 						>
 							<header className="usc-group__head">
+								<span
+									className="usc-group__handle"
+									draggable
+									onDragStart={onGroupDragStart(group)}
+									onDragEnd={onGroupDragEnd}
+									title={__('Drag to reorder', 'univer-smart-carousel')}
+									aria-label={__('Drag to reorder', 'univer-smart-carousel')}
+								>
+									<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+										<path
+											fill="currentColor"
+											d="M9 4h2v2H9zm0 4h2v2H9zm0 4h2v2H9zm0 4h2v2H9zm4-12h2v2h-2zm0 4h2v2h-2zm0 4h2v2h-2zm0 4h2v2h-2z"
+										/>
+									</svg>
+								</span>
 								<button
 									type="button"
 									className="usc-group__chev"
