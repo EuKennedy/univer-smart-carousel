@@ -138,6 +138,9 @@ final class Translations {
 			'Aspect ratio (desktop)' => 'Proporção (desktop)',
 			'Aspect ratio (mobile)'  => 'Proporção (mobile)',
 			'Auto — match image'     => 'Automático — usar a proporção da imagem',
+			'e.g. auto, 16/9, 1560x1080' => 'ex.: auto, 16/9, 1560x1080',
+			'Preset ratios'          => 'Proporções predefinidas',
+			'0 = sharp corners.'     => '0 = cantos retos.',
 			'Gap (px)'               => 'Espaçamento (px)',
 			'Border radius (px)'     => 'Borda arredondada (px)',
 

@@ -17,6 +17,7 @@ import {
 } from './ui';
 import BannerEditor from './BannerEditor';
 import ShortcodePanel from './ShortcodePanel';
+import AspectRatioField from './AspectRatioField';
 import { Campaigns as API } from '../lib/api';
 import { copyToClipboard, slugify, defaultSettings } from '../lib/utils';
 
@@ -37,15 +38,6 @@ const NAVIGATION_OPTIONS = [
 	{ value: 'arrows', label: __('Arrows', 'univer-smart-carousel') },
 ];
 
-const RATIOS = [
-	{ value: 'auto', label: __('Auto — match image', 'univer-smart-carousel') },
-	{ value: '21/9', label: '21 / 9 — cinematic wide' },
-	{ value: '16/9', label: '16 / 9 — widescreen' },
-	{ value: '4/3', label: '4 / 3 — classic' },
-	{ value: '1/1', label: '1 / 1 — square' },
-	{ value: '4/5', label: '4 / 5 — vertical (mobile)' },
-	{ value: '9/16', label: '9 / 16 — story' },
-];
 
 export default function CampaignEditor({ campaign, onChange, onSave, onDelete, saving }) {
 	const [tab, setTab] = useState('desktop');
@@ -260,20 +252,16 @@ export default function CampaignEditor({ campaign, onChange, onSave, onDelete, s
 									}
 								/>
 							</div>
-							<div className="usc-row-2">
-								<Select
-									label={__('Aspect ratio (desktop)', 'univer-smart-carousel')}
-									options={RATIOS}
-									value={settings.aspect_ratio_desktop}
-									onChange={(v) => setSetting({ aspect_ratio_desktop: v })}
-								/>
-								<Select
-									label={__('Aspect ratio (mobile)', 'univer-smart-carousel')}
-									options={RATIOS}
-									value={settings.aspect_ratio_mobile}
-									onChange={(v) => setSetting({ aspect_ratio_mobile: v })}
-								/>
-							</div>
+							<AspectRatioField
+								label={__('Aspect ratio (desktop)', 'univer-smart-carousel')}
+								value={settings.aspect_ratio_desktop}
+								onChange={(v) => setSetting({ aspect_ratio_desktop: v })}
+							/>
+							<AspectRatioField
+								label={__('Aspect ratio (mobile)', 'univer-smart-carousel')}
+								value={settings.aspect_ratio_mobile}
+								onChange={(v) => setSetting({ aspect_ratio_mobile: v })}
+							/>
 							<div className="usc-row-2">
 								<Input
 									label={__('Gap (px)', 'univer-smart-carousel')}
@@ -285,6 +273,7 @@ export default function CampaignEditor({ campaign, onChange, onSave, onDelete, s
 								/>
 								<Input
 									label={__('Border radius (px)', 'univer-smart-carousel')}
+									hint={__('0 = sharp corners.', 'univer-smart-carousel')}
 									type="number"
 									min={0}
 									max={64}

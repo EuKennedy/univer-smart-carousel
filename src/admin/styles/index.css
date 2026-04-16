@@ -533,6 +533,49 @@ select.usc-input {
 	padding-right: 32px;
 }
 
+/* ---------- Aspect ratio field ---------- */
+
+.usc-aspect-field .usc-input {
+	font-variant-numeric: tabular-nums;
+}
+
+.usc-aspect-presets {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 2px;
+}
+
+.usc-chip {
+	display: inline-flex;
+	align-items: center;
+	background: var(--usc-color-surface);
+	border: 1px solid var(--usc-color-border-strong);
+	color: var(--usc-color-text-muted);
+	border-radius: 999px;
+	padding: 3px 10px;
+	font-family: var(--usc-font-mono);
+	font-size: 11.5px;
+	cursor: pointer;
+	transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.usc-chip:hover {
+	background: var(--usc-color-surface-2);
+	color: var(--usc-color-text);
+}
+
+.usc-chip.is-active {
+	background: var(--usc-color-primary);
+	color: var(--usc-color-primary-fg);
+	border-color: var(--usc-color-primary);
+}
+
+.usc-chip:focus-visible {
+	outline: 2px solid var(--usc-color-accent);
+	outline-offset: 2px;
+}
+
 /* ---------- Buttons ---------- */
 
 .usc-btn {

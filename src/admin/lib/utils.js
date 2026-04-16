@@ -55,7 +55,7 @@ export function defaultSettings() {
 		navigation: 'arrows',
 		show_progress: false,
 		pause_on_hover: true,
-		border_radius: 16,
+		border_radius: 0,
 		transition: 'slide',
 		aspect_ratio_desktop: 'auto',
 		aspect_ratio_mobile: 'auto',
