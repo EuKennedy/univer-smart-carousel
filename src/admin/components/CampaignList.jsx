@@ -17,6 +17,7 @@ export default function CampaignList({
 	campaigns,
 	loading,
 	activeId,
+	hasDraft,
 	onSelect,
 	onCreate,
 	onSearch,
@@ -64,7 +65,7 @@ export default function CampaignList({
 			<div className="usc-list__items">
 				{loading && <div className="usc-list__loading">{__('Loading…', 'univer-smart-carousel')}</div>}
 
-				{!loading && campaigns.length === 0 && (
+				{!loading && campaigns.length === 0 && !hasDraft && (
 					<EmptyState
 						title={__('No campaigns yet', 'univer-smart-carousel')}
 						description={__(

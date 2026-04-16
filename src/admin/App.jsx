@@ -121,6 +121,7 @@ export default function App() {
 					campaigns={campaigns}
 					loading={loading}
 					activeId={activeId}
+					hasDraft={!!draft}
 					onSelect={onSelect}
 					onCreate={onCreate}
 					onSearch={onSearch}
