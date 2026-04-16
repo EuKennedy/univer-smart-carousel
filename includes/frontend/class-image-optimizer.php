@@ -75,22 +75,26 @@ final class Image_Optimizer {
 			? ( $settings['image_max_width_desktop'] ?? 1920 )
 			: ( $settings['image_max_width_mobile'] ?? 750 ) );
 
-		// Nothing to do if the original is smaller than our target.
-		// Shipping the original also side-steps the "upscaling won't
-		// happen, so srcset 2x might be missing" edge case.
-		if ( (int) $base['width'] <= 0 || (int) $base['width'] <= $max_width ) {
-			return self::maybe_add_webp( $base, $attachment_id, (int) $base['width'], (int) $settings['image_quality'], ! empty( $settings['image_webp'] ) );
+		if ( (int) $base['width'] <= 0 ) {
+			return $base;
 		}
 
 		$quality  = (int) ( $settings['image_quality'] ?? 82 );
 		$emit_webp = ! empty( $settings['image_webp'] ) && self::server_supports_webp();
 
 		// Build a srcset: one variant per density, capped at the original's
-		// natural size (no upscaling).
-		$jpeg_srcset_parts = [];
-		$webp_srcset_parts = [];
-		$primary_url       = null;
-		$primary_webp_url  = null;
+		// natural size (no upscaling). Note: we ALWAYS generate variants,
+		// even when the original is already at (or below) max_width — the
+		// point is to recompress at the configured quality. Skipping the
+		// generation there used to ship the untouched, WP-default-quality
+		// original as the JPEG fallback, which was ~60-70% larger than
+		// the intended output. WebP-less browsers were paying that cost.
+		// Keyed by target_width so that 2x density clamping down to the
+		// original's natural width doesn't duplicate an entry in the srcset.
+		$jpeg_parts       = []; // [ width => url ]
+		$webp_parts       = []; // [ width => url ]
+		$primary_url      = null;
+		$primary_webp_url = null;
 
 		foreach ( self::DENSITIES as $density ) {
 			$target_width = (int) round( $max_width * $density );
@@ -98,23 +102,34 @@ final class Image_Optimizer {
 				$target_width = (int) $base['width'];
 			}
 
-			$jpeg_url = self::ensure_variant( $attachment_id, $target_width, $quality, 'jpeg' );
-			if ( $jpeg_url ) {
-				$jpeg_srcset_parts[] = $jpeg_url . ' ' . $target_width . 'w';
-				if ( null === $primary_url || 1.0 === $density ) {
-					$primary_url = $jpeg_url;
+			if ( ! isset( $jpeg_parts[ $target_width ] ) ) {
+				$jpeg_url = self::ensure_variant( $attachment_id, $target_width, $quality, 'jpeg' );
+				if ( $jpeg_url ) {
+					$jpeg_parts[ $target_width ] = $jpeg_url;
+					if ( null === $primary_url || 1.0 === $density ) {
+						$primary_url = $jpeg_url;
+					}
 				}
 			}
 
-			if ( $emit_webp ) {
+			if ( $emit_webp && ! isset( $webp_parts[ $target_width ] ) ) {
 				$webp_url = self::ensure_variant( $attachment_id, $target_width, $quality, 'webp' );
 				if ( $webp_url ) {
-					$webp_srcset_parts[] = $webp_url . ' ' . $target_width . 'w';
+					$webp_parts[ $target_width ] = $webp_url;
 					if ( null === $primary_webp_url || 1.0 === $density ) {
 						$primary_webp_url = $webp_url;
 					}
 				}
 			}
+		}
+
+		$jpeg_srcset_parts = [];
+		foreach ( $jpeg_parts as $w => $u ) {
+			$jpeg_srcset_parts[] = $u . ' ' . $w . 'w';
+		}
+		$webp_srcset_parts = [];
+		foreach ( $webp_parts as $w => $u ) {
+			$webp_srcset_parts[] = $u . ' ' . $w . 'w';
 		}
 
 		return [
@@ -202,20 +217,4 @@ final class Image_Optimizer {
 		return '';
 	}
 
-	/**
-	 * Add webp_url / webp_srcset to an untransformed payload when
-	 * we're skipping resizing but still want WebP on browsers that
-	 * support it.
-	 */
-	private static function maybe_add_webp( array $base, int $attachment_id, int $width, int $quality, bool $emit_webp ): array {
-		if ( ! $emit_webp || ! self::server_supports_webp() ) {
-			$base['webp_url']    = null;
-			$base['webp_srcset'] = null;
-			return $base;
-		}
-		$webp = self::ensure_variant( $attachment_id, $width, $quality, 'webp' );
-		$base['webp_url']    = $webp;
-		$base['webp_srcset'] = $webp ? ( $webp . ' ' . $width . 'w' ) : null;
-		return $base;
-	}
 }
