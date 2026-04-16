@@ -99,7 +99,7 @@ final class Campaigns_Controller {
 
 	public function create_item( WP_REST_Request $request ) {
 		$payload = $this->extract_payload( $request );
-		$id      = Campaign_Repository::upsert_campaign( $payload );
+		$id      = Campaign_Repository::create_campaign( $payload );
 		if ( $id <= 0 ) {
 			return new WP_Error( 'usc_create_failed', __( 'Failed to create campaign.', 'univer-smart-carousel' ), [ 'status' => 500 ] );
 		}
@@ -110,15 +110,20 @@ final class Campaigns_Controller {
 		return new WP_REST_Response( Campaign_Repository::get_campaign( $id, true ), 201 );
 	}
 
+	/**
+	 * PUT /campaigns/{id} is a partial update: any field absent from the
+	 * payload is left untouched. This matters most for `banners` — passing
+	 * just `{status:'active'}` must NOT wipe the banners or rename the
+	 * campaign to "Untitled".
+	 */
 	public function update_item( WP_REST_Request $request ) {
 		$id      = (int) $request['id'];
-		$current = Campaign_Repository::get_campaign( $id );
-		if ( ! $current ) {
+		$payload = $this->extract_payload( $request );
+
+		$ok = Campaign_Repository::update_campaign( $id, $payload );
+		if ( ! $ok ) {
 			return new WP_Error( 'usc_not_found', __( 'Campaign not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
 		}
-
-		$payload = $this->extract_payload( $request );
-		Campaign_Repository::upsert_campaign( $payload, $id );
 
 		$this->save_banners( $id, $payload );
 		Campaign_Repository::flush_slug_cache();

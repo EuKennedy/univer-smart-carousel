@@ -272,9 +272,11 @@ final class Campaign_Repository {
 	 * ------------------------------------------------------------------ */
 
 	/**
-	 * Insert or update a campaign. Returns the persisted ID.
+	 * Create a new campaign. Missing fields fall back to safe defaults.
+	 *
+	 * @return int The new campaign id (0 on failure).
 	 */
-	public static function upsert_campaign( array $input, ?int $id = null ): int {
+	public static function create_campaign( array $input ): int {
 		global $wpdb;
 		$table = Database_Installer::table_campaigns();
 		$now   = current_time( 'mysql', true );
@@ -286,7 +288,7 @@ final class Campaign_Repository {
 
 		$slug_raw = isset( $input['slug'] ) ? sanitize_title( $input['slug'] ) : '';
 		$slug     = $slug_raw !== '' ? $slug_raw : $name;
-		$slug     = self::generate_unique_slug( $slug, $id );
+		$slug     = self::generate_unique_slug( $slug );
 
 		$data = [
 			'name'       => $name,
@@ -295,24 +297,86 @@ final class Campaign_Repository {
 			'settings'   => wp_json_encode( self::sanitize_settings( $input['settings'] ?? [] ) ),
 			'start_date' => self::sanitize_datetime( $input['start_date'] ?? null ),
 			'end_date'   => self::sanitize_datetime( $input['end_date'] ?? null ),
+			'created_at' => $now,
 			'updated_at' => $now,
 		];
 
-		$formats = [ '%s', '%s', '%s', '%s', '%s', '%s', '%s' ];
-
-		if ( $id ) {
-			$wpdb->update( $table, $data, [ 'id' => $id ], $formats, [ '%d' ] ); // phpcs:ignore
-			$persisted_id = $id;
-		} else {
-			$data['created_at'] = $now;
-			$formats[]          = '%s';
-			$wpdb->insert( $table, $data, $formats ); // phpcs:ignore
-			$persisted_id = (int) $wpdb->insert_id;
-		}
+		$wpdb->insert( $table, $data, [ '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ] ); // phpcs:ignore
 
 		self::flush_slug_cache();
 
-		return $persisted_id;
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Partial update: only fields present in $input are touched. Anything
+	 * else stays as it is — including name, slug, banners, scheduling.
+	 *
+	 * Settings are merged shallowly with the current settings so a PUT with
+	 * just one toggle doesn't reset the rest.
+	 *
+	 * @return bool true on success, false if the campaign doesn't exist.
+	 */
+	public static function update_campaign( int $id, array $input ): bool {
+		$current = self::get_campaign( $id );
+		if ( ! $current ) {
+			return false;
+		}
+
+		$data    = [];
+		$formats = [];
+
+		if ( array_key_exists( 'name', $input ) ) {
+			$name = sanitize_text_field( (string) $input['name'] );
+			if ( '' !== $name ) {
+				$data['name']    = $name;
+				$formats['name'] = '%s';
+			}
+		}
+
+		if ( array_key_exists( 'slug', $input ) ) {
+			$slug = sanitize_title( (string) $input['slug'] );
+			if ( '' !== $slug && $slug !== $current['slug'] ) {
+				$data['slug']    = self::generate_unique_slug( $slug, $id );
+				$formats['slug'] = '%s';
+			}
+		}
+
+		if ( array_key_exists( 'status', $input ) ) {
+			$data['status']    = self::sanitize_status( $input['status'] );
+			$formats['status'] = '%s';
+		}
+
+		if ( array_key_exists( 'settings', $input ) && is_array( $input['settings'] ) ) {
+			$merged             = array_merge( $current['settings'], $input['settings'] );
+			$data['settings']   = wp_json_encode( self::sanitize_settings( $merged ) );
+			$formats['settings'] = '%s';
+		}
+
+		if ( array_key_exists( 'start_date', $input ) ) {
+			$data['start_date']    = self::sanitize_datetime( $input['start_date'] );
+			$formats['start_date'] = '%s';
+		}
+
+		if ( array_key_exists( 'end_date', $input ) ) {
+			$data['end_date']    = self::sanitize_datetime( $input['end_date'] );
+			$formats['end_date'] = '%s';
+		}
+
+		if ( empty( $data ) ) {
+			return true; // Nothing to update is still a success.
+		}
+
+		$data['updated_at']    = current_time( 'mysql', true );
+		$formats['updated_at'] = '%s';
+
+		global $wpdb;
+		$table = Database_Installer::table_campaigns();
+		$wpdb->update( $table, $data, [ 'id' => $id ], array_values( $formats ), [ '%d' ] ); // phpcs:ignore
+
+		self::flush_slug_cache();
+
+		return true;
 	}
 
 	public static function delete_campaign( int $id ): bool {
