@@ -19,5 +19,6 @@ final class Rest_Api_Module {
 		( new V1\Campaigns_Controller() )->register_routes();
 		( new V1\Settings_Controller() )->register_routes();
 		( new V1\Api_Keys_Controller() )->register_routes();
+		( new V1\Discover_Controller() )->register_routes();
 	}
 }
