@@ -28,7 +28,7 @@ define( 'USC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'USC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'USC_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 define( 'USC_REST_NAMESPACE', 'usc/v1' );
-define( 'USC_DB_VERSION', '1.0.0' );
+define( 'USC_DB_VERSION', '1.0.1' );
 define( 'USC_TABLE_CAMPAIGNS', 'usc_campaigns' );
 define( 'USC_TABLE_BANNERS', 'usc_banners' );
 define( 'USC_CACHE_GROUP', 'usc_cache' );
