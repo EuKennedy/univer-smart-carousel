@@ -50,15 +50,20 @@ final class Carousel_Renderer {
 
 		// Preload the first image for LCP (only if we're rendering one carousel above the fold).
 		// We add a hint via <link rel="preload"> in the markup; safe even multiple times.
-		$first  = $banners[0]['image'];
+		$first       = $banners[0]['image'];
+		$navigation  = (string) $settings['navigation'];
+		$show_arrows = 'arrows' === $navigation;
+		$show_dots   = 'dots' === $navigation;
+
 		$config = [
 			'spv'           => $slides_pv,
 			'gap'           => (int) $settings['gap'],
 			'autoplay'      => (bool) $settings['autoplay'],
 			'autoplayDelay' => (int) $settings['autoplay_delay'],
 			'loop'          => (bool) $settings['loop'],
-			'showDots'      => (bool) $settings['show_dots'],
-			'showArrows'    => (bool) $settings['show_arrows'],
+			'navigation'    => $navigation,
+			'showDots'      => $show_dots,
+			'showArrows'    => $show_arrows,
 			'showProgress'  => (bool) $settings['show_progress'],
 			'pauseOnHover'  => (bool) $settings['pause_on_hover'],
 			'transition'    => (string) $settings['transition'],

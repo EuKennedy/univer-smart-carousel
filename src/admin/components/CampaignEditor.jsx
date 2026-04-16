@@ -31,6 +31,12 @@ const TRANSITIONS = [
 	{ value: 'fade', label: __('Fade', 'univer-smart-carousel') },
 ];
 
+const NAVIGATION_OPTIONS = [
+	{ value: 'none', label: __('None', 'univer-smart-carousel') },
+	{ value: 'dots', label: __('Dots', 'univer-smart-carousel') },
+	{ value: 'arrows', label: __('Arrows', 'univer-smart-carousel') },
+];
+
 const RATIOS = [
 	{ value: '21/9', label: '21 / 9 — cinematic wide' },
 	{ value: '16/9', label: '16 / 9 — widescreen' },
@@ -317,15 +323,12 @@ export default function CampaignEditor({ campaign, onChange, onSave, onDelete, s
 								onChange={(v) => setSetting({ loop: v })}
 								label={__('Loop', 'univer-smart-carousel')}
 							/>
-							<Switch
-								checked={settings.show_arrows}
-								onChange={(v) => setSetting({ show_arrows: v })}
-								label={__('Show arrows', 'univer-smart-carousel')}
-							/>
-							<Switch
-								checked={settings.show_dots}
-								onChange={(v) => setSetting({ show_dots: v })}
-								label={__('Show dots', 'univer-smart-carousel')}
+							<Select
+								label={__('Navigation', 'univer-smart-carousel')}
+								hint={__('How visitors move between slides.', 'univer-smart-carousel')}
+								options={NAVIGATION_OPTIONS}
+								value={settings.navigation || 'arrows'}
+								onChange={(v) => setSetting({ navigation: v })}
 							/>
 							<Switch
 								checked={settings.show_progress}

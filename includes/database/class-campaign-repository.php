@@ -39,8 +39,7 @@ final class Campaign_Repository {
 			'autoplay'                => true,
 			'autoplay_delay'          => 5000,
 			'loop'                    => true,
-			'show_dots'               => true,
-			'show_arrows'             => true,
+			'navigation'              => 'arrows', // none|dots|arrows
 			'show_progress'           => false,
 			'pause_on_hover'          => true,
 			'border_radius'           => 16,
@@ -69,9 +68,12 @@ final class Campaign_Repository {
 		$out['autoplay']       = ! empty( $input['autoplay'] );
 		$out['autoplay_delay'] = max( 1000, min( 30000, (int) ( $input['autoplay_delay'] ?? $defaults['autoplay_delay'] ) ) );
 		$out['loop']           = ! empty( $input['loop'] );
-		$out['show_dots']      = ! empty( $input['show_dots'] );
-		$out['show_arrows']    = ! empty( $input['show_arrows'] );
-		$out['show_progress']  = ! empty( $input['show_progress'] );
+
+		// Navigation: single source of truth replacing the old show_arrows /
+		// show_dots pair. Legacy campaigns (saved before navigation existed)
+		// migrate to 'none' so the user can opt back into a style on purpose.
+		$out['navigation']    = self::sanitize_navigation( $input );
+		$out['show_progress'] = ! empty( $input['show_progress'] );
 		$out['pause_on_hover'] = ! empty( $input['pause_on_hover'] );
 		$out['border_radius']  = max( 0, min( 64, (int) ( $input['border_radius'] ?? $defaults['border_radius'] ) ) );
 		$out['transition']     = in_array( ( $input['transition'] ?? '' ), [ 'slide', 'fade' ], true ) ? $input['transition'] : 'slide';
@@ -81,6 +83,28 @@ final class Campaign_Repository {
 		$out['aspect_ratio_mobile']  = self::sanitize_ratio( $input['aspect_ratio_mobile'] ?? '', $defaults['aspect_ratio_mobile'] );
 
 		return $out;
+	}
+
+	private const ALLOWED_NAVIGATION = [ 'none', 'dots', 'arrows' ];
+
+	private static function sanitize_navigation( array $input ): string {
+		if ( array_key_exists( 'navigation', $input ) ) {
+			$nav = is_string( $input['navigation'] ) ? strtolower( trim( $input['navigation'] ) ) : '';
+			if ( in_array( $nav, self::ALLOWED_NAVIGATION, true ) ) {
+				return $nav;
+			}
+		}
+
+		// No `navigation` key. If the legacy show_arrows/show_dots fields
+		// are present (campaign was saved before this field existed), the
+		// product call is to migrate to 'none' so the user re-picks
+		// intentionally. If neither is present, this is a fresh sanitize
+		// for a brand-new campaign — fall through to the default.
+		if ( array_key_exists( 'show_arrows', $input ) || array_key_exists( 'show_dots', $input ) ) {
+			return 'none';
+		}
+
+		return 'arrows';
 	}
 
 	private static function sanitize_ratio( $value, string $fallback ): string {
