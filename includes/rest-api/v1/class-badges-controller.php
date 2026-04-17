@@ -1,25 +1,30 @@
 <?php
 /**
- * Badges controller — thin wrapper around a WooCommerce attribute
- * taxonomy so marketing can rename + re-swatch from inside our admin
- * instead of walking into term.php every time.
+ * Badges controller — renames + re-swatches terms of a WooCommerce
+ * attribute taxonomy, intended as a shortcut over walking into
+ * /wp-admin/term.php every rotation.
  *
  * Endpoints:
  *   GET  /usc/v1/badges?taxonomy=pa_badge-ofertas
- *     → [ { id, name, slug, count, swatch: {meta_key, image:{…}} } ]
+ *   PUT  /usc/v1/badges/{term_id}   body: { taxonomy?, name?, image_id?, meta_key? }
  *
- *   PUT  /usc/v1/badges/{term_id}
- *     body: { taxonomy?, name?, image_id? }
- *     → updated term row
+ * Storage-format awareness:
  *
- * How the swatch meta key is discovered:
- *   Different swatch plugins use different meta keys. To stay
- *   compatible without hard-coding them all, we inspect every meta
- *   value on the term and pick the one that looks like an attachment
- *   id (numeric + `wp_attachment_is_image()` returns true). If nothing
- *   matches we fall back to `product_attribute_image`, which is the
- *   most common default. The caller can also pass `meta_key` explicitly
- *   on update to force a specific key.
+ *   Different swatch plugins / themes write the attached image under
+ *   different meta keys AND in different value shapes. The three that
+ *   show up in the wild on WooCommerce installs:
+ *
+ *     (a) an integer attachment ID         →  `product_attribute_image`, `thumbnail_id`
+ *     (b) an array with `id` + `url`       →  Woodmart / XTS themes store under `image`
+ *     (c) just a URL string                →  older / custom plugins
+ *
+ *   discover_image() walks every meta row on the term and returns
+ *   whichever one actually resolves to an image attachment, plus the
+ *   shape it was stored in. update_item() preserves that shape on
+ *   write — if the site's swatches plugin reads an array, we write
+ *   an array; if it reads an int, we write an int. That's the only
+ *   way the change actually reflects on the live site without
+ *   guessing which plugin is active.
  *
  * @package Univer\SmartCarousel
  */
@@ -41,11 +46,19 @@ final class Badges_Controller {
 	private string $rest_base = 'badges';
 
 	/**
-	 * Ordered fallback list. Discovery walks these in order when no
-	 * term meta actually resolves to an image — the first one wins.
+	 * Shape constants for how the attachment is stored in term meta.
+	 */
+	private const SHAPE_INT   = 'int';   // meta value IS the attachment ID.
+	private const SHAPE_ARRAY = 'array'; // meta value is { id: N, url: "..." }.
+	private const SHAPE_URL   = 'url';   // meta value is just a URL string.
+
+	/**
+	 * Ordered guess list when no existing meta resolves to an image —
+	 * used for brand-new terms that don't have a swatch yet.
 	 */
 	private const KNOWN_IMAGE_META_KEYS = [
-		'product_attribute_image',
+		'image',                   // Woodmart / XTS themes
+		'product_attribute_image', // popular swatch plugins
 		'thumbnail_id',
 		'swatch_image',
 		'image_id',
@@ -143,7 +156,7 @@ final class Badges_Controller {
 			}
 		}
 
-		// Swatch image
+		// Swatch image — has to match whatever format the site's plugin reads.
 		if ( array_key_exists( 'image_id', $body ) ) {
 			$image_id = (int) $body['image_id'];
 			if ( $image_id > 0 && ! wp_attachment_is_image( $image_id ) ) {
@@ -154,14 +167,24 @@ final class Badges_Controller {
 				);
 			}
 
-			// Explicit key wins. Otherwise discover from existing term
-			// metas, or fall back to the first known key.
-			$meta_key = isset( $body['meta_key'] ) ? sanitize_key( $body['meta_key'] ) : $this->discover_image_meta_key( $term_id );
+			$discovered = $this->discover_image( $term_id );
+
+			// If caller sent explicit meta_key / shape, honor that. Otherwise
+			// preserve whatever was there before. If nothing was there before,
+			// default to the Woodmart-compatible "image" + array shape because
+			// that's what Kennedy's site (and any Woodmart/XTS theme) reads.
+			$meta_key = isset( $body['meta_key'] ) && '' !== $body['meta_key']
+				? sanitize_key( $body['meta_key'] )
+				: ( $discovered ? $discovered['meta_key'] : self::KNOWN_IMAGE_META_KEYS[0] );
+
+			$shape = $discovered ? $discovered['shape'] : self::SHAPE_ARRAY;
 
 			if ( $image_id > 0 ) {
-				update_term_meta( $term_id, $meta_key, $image_id );
+				$value = $this->build_meta_value( $image_id, $shape );
+				update_term_meta( $term_id, $meta_key, $value );
 			} else {
-				// image_id === 0 means "remove swatch".
+				// image_id === 0 means "remove swatch" — remove only from
+				// the key we know about, don't touch anything else.
 				delete_term_meta( $term_id, $meta_key );
 			}
 		}
@@ -178,45 +201,141 @@ final class Badges_Controller {
 	}
 
 	/**
+	 * Hydrated term row for the UI.
+	 *
 	 * @return array<string,mixed>
 	 */
 	private function hydrate( $term, string $taxonomy ): array {
-		$swatch_meta_key = $this->discover_image_meta_key( (int) $term->term_id );
-		$image_id        = (int) get_term_meta( (int) $term->term_id, $swatch_meta_key, true );
-		$image_payload   = $image_id > 0 ? Campaign_Repository::image_payload( $image_id ) : null;
+		$discovered    = $this->discover_image( (int) $term->term_id );
+		$image_id      = $discovered['image_id'] ?? 0;
+		$image_payload = $image_id > 0 ? Campaign_Repository::image_payload( $image_id ) : null;
+
+		// Raw meta dump as a debug aid. Admin UI can render this in an
+		// "advanced" disclosure so the user (or we) can see what the
+		// site's actually storing under the hood. Harmless to include —
+		// route is already scoped behind admin auth.
+		$raw_meta = get_term_meta( (int) $term->term_id );
+		if ( ! is_array( $raw_meta ) ) {
+			$raw_meta = [];
+		}
+		// Flatten: get_term_meta without a key returns each as array.
+		$flat_meta = [];
+		foreach ( $raw_meta as $k => $v ) {
+			$flat_meta[ $k ] = is_array( $v ) && count( $v ) === 1 ? $v[0] : $v;
+		}
 
 		return [
-			'id'            => (int) $term->term_id,
-			'name'          => (string) $term->name,
-			'slug'          => (string) $term->slug,
-			'taxonomy'      => $taxonomy,
-			'count'         => (int) $term->count,
-			'edit_url'      => esc_url_raw( admin_url( 'term.php?taxonomy=' . $taxonomy . '&tag_ID=' . (int) $term->term_id ) ),
-			'swatch'        => [
-				'meta_key' => $swatch_meta_key,
+			'id'       => (int) $term->term_id,
+			'name'     => (string) $term->name,
+			'slug'     => (string) $term->slug,
+			'taxonomy' => $taxonomy,
+			'count'    => (int) $term->count,
+			'edit_url' => esc_url_raw( admin_url( 'term.php?taxonomy=' . $taxonomy . '&tag_ID=' . (int) $term->term_id ) ),
+			'swatch'   => [
+				'meta_key' => $discovered['meta_key'] ?? self::KNOWN_IMAGE_META_KEYS[0],
+				'shape'    => $discovered['shape'] ?? self::SHAPE_ARRAY,
 				'image_id' => $image_id,
 				'image'    => $image_payload,
 			],
+			'raw_meta' => $flat_meta,
 		];
 	}
 
 	/**
-	 * Walk the term's meta map looking for a value that resolves to an
-	 * image attachment. First hit wins. Falls back to the first known
-	 * key so caller-side update writes to something sensible even on a
-	 * term that currently has no swatch.
+	 * Walk every term meta value and return the first one that resolves
+	 * to an image attachment — along with the SHAPE it was stored in,
+	 * so update_item() can write back in the same shape.
+	 *
+	 * @return array{meta_key:string, image_id:int, shape:string}|null
 	 */
-	private function discover_image_meta_key( int $term_id ): string {
+	private function discover_image( int $term_id ): ?array {
 		$all = get_term_meta( $term_id );
-		if ( is_array( $all ) ) {
-			foreach ( $all as $key => $values ) {
-				$value = is_array( $values ) ? reset( $values ) : $values;
-				$maybe_id = (int) $value;
-				if ( $maybe_id > 0 && wp_attachment_is_image( $maybe_id ) ) {
-					return (string) $key;
+		if ( ! is_array( $all ) ) {
+			return null;
+		}
+
+		foreach ( $all as $key => $values ) {
+			$value = is_array( $values ) ? reset( $values ) : $values;
+			$resolved = $this->resolve_value( $value );
+			if ( $resolved && $resolved['image_id'] > 0 && wp_attachment_is_image( $resolved['image_id'] ) ) {
+				return [
+					'meta_key' => (string) $key,
+					'image_id' => $resolved['image_id'],
+					'shape'    => $resolved['shape'],
+				];
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Figure out what a single meta value actually represents. Covers:
+	 *   - integer or numeric string    → attachment ID
+	 *   - serialized array             → unserialize + look for id/url
+	 *   - url string                   → attachment_url_to_postid()
+	 *
+	 * @return array{image_id:int, shape:string}|null
+	 */
+	private function resolve_value( $value ): ?array {
+		if ( is_numeric( $value ) ) {
+			$id = (int) $value;
+			if ( $id > 0 ) {
+				return [ 'image_id' => $id, 'shape' => self::SHAPE_INT ];
+			}
+			return null;
+		}
+
+		if ( is_array( $value ) ) {
+			if ( isset( $value['id'] ) && (int) $value['id'] > 0 ) {
+				return [ 'image_id' => (int) $value['id'], 'shape' => self::SHAPE_ARRAY ];
+			}
+			if ( isset( $value['url'] ) && is_string( $value['url'] ) ) {
+				$id = attachment_url_to_postid( $value['url'] );
+				if ( $id > 0 ) {
+					return [ 'image_id' => $id, 'shape' => self::SHAPE_ARRAY ];
+				}
+			}
+			return null;
+		}
+
+		if ( is_string( $value ) ) {
+			// Some plugins pre-serialize even the simple shapes, try that.
+			$maybe = maybe_unserialize( $value );
+			if ( $maybe !== $value ) {
+				return $this->resolve_value( $maybe );
+			}
+
+			// Plain URL string fallback.
+			if ( 0 === strpos( $value, 'http' ) ) {
+				$id = attachment_url_to_postid( $value );
+				if ( $id > 0 ) {
+					return [ 'image_id' => $id, 'shape' => self::SHAPE_URL ];
 				}
 			}
 		}
-		return self::KNOWN_IMAGE_META_KEYS[0];
+
+		return null;
+	}
+
+	/**
+	 * Convert an attachment id into the shape that will be written to
+	 * the meta row, preserving whatever the site was using before.
+	 */
+	private function build_meta_value( int $image_id, string $shape ) {
+		switch ( $shape ) {
+			case self::SHAPE_ARRAY:
+				$full = wp_get_attachment_image_src( $image_id, 'full' );
+				return [
+					'id'  => $image_id,
+					'url' => $full ? $full[0] : '',
+				];
+			case self::SHAPE_URL:
+				$full = wp_get_attachment_image_src( $image_id, 'full' );
+				return $full ? $full[0] : '';
+			case self::SHAPE_INT:
+			default:
+				return $image_id;
+		}
 	}
 }
