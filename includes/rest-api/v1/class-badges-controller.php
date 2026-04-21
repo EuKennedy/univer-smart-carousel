@@ -105,6 +105,14 @@ final class Badges_Controller {
 
 	public function list_items( WP_REST_Request $request ) {
 		$taxonomy = $this->taxonomy_from( $request );
+		if ( 0 !== strpos( $taxonomy, 'pa_' ) ) {
+			return new WP_Error(
+				'usc_invalid_taxonomy',
+				__( 'Only product attribute taxonomies (pa_*) are allowed.', 'univer-smart-carousel' ),
+				[ 'status' => 403 ]
+			);
+		}
+
 		if ( ! taxonomy_exists( $taxonomy ) ) {
 			return new WP_Error(
 				'usc_unknown_taxonomy',
@@ -140,6 +148,14 @@ final class Badges_Controller {
 		}
 
 		$taxonomy = isset( $body['taxonomy'] ) ? sanitize_key( $body['taxonomy'] ) : 'pa_badge-ofertas';
+		if ( 0 !== strpos( $taxonomy, 'pa_' ) ) {
+			return new WP_Error(
+				'usc_invalid_taxonomy',
+				__( 'Only product attribute taxonomies (pa_*) are allowed.', 'univer-smart-carousel' ),
+				[ 'status' => 403 ]
+			);
+		}
+
 		$term     = get_term( $term_id, $taxonomy );
 		if ( ! $term || is_wp_error( $term ) ) {
 			return new WP_Error( 'usc_not_found', __( 'Badge not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
@@ -210,21 +226,7 @@ final class Badges_Controller {
 		$image_id      = $discovered['image_id'] ?? 0;
 		$image_payload = $image_id > 0 ? Campaign_Repository::image_payload( $image_id ) : null;
 
-		// Raw meta dump as a debug aid. Admin UI can render this in an
-		// "advanced" disclosure so the user (or we) can see what the
-		// site's actually storing under the hood. Harmless to include —
-		// route is already scoped behind admin auth.
-		$raw_meta = get_term_meta( (int) $term->term_id );
-		if ( ! is_array( $raw_meta ) ) {
-			$raw_meta = [];
-		}
-		// Flatten: get_term_meta without a key returns each as array.
-		$flat_meta = [];
-		foreach ( $raw_meta as $k => $v ) {
-			$flat_meta[ $k ] = is_array( $v ) && count( $v ) === 1 ? $v[0] : $v;
-		}
-
-		return [
+		$out = [
 			'id'       => (int) $term->term_id,
 			'name'     => (string) $term->name,
 			'slug'     => (string) $term->slug,
@@ -237,8 +239,26 @@ final class Badges_Controller {
 				'image_id' => $image_id,
 				'image'    => $image_payload,
 			],
-			'raw_meta' => $flat_meta,
 		];
+
+		// Raw meta dump as a debug aid. Admin UI can render this in an
+		// "advanced" disclosure so the user (or we) can see what the
+		// site's actually storing under the hood. Only expose to full admins,
+		// not arbitrary read-scope API keys.
+		if ( current_user_can( USC_ADMIN_CAPABILITY ) ) {
+			$raw_meta = get_term_meta( (int) $term->term_id );
+			if ( ! is_array( $raw_meta ) ) {
+				$raw_meta = [];
+			}
+			// Flatten: get_term_meta without a key returns each as array.
+			$flat_meta = [];
+			foreach ( $raw_meta as $k => $v ) {
+				$flat_meta[ $k ] = is_array( $v ) && count( $v ) === 1 ? $v[0] : $v;
+			}
+			$out['raw_meta'] = $flat_meta;
+		}
+
+		return $out;
 	}
 
 	/**
