@@ -502,6 +502,7 @@ final class Campaign_Repository {
 			$link_rel  = isset( $banner['link_rel'] ) ? sanitize_text_field( $banner['link_rel'] ) : '';
 			$link_targ = self::sanitize_link_target( $banner['link_target'] ?? '_self' );
 			$is_active = array_key_exists( 'is_active', $banner ) ? ( ! empty( $banner['is_active'] ) ? 1 : 0 ) : 1;
+			$name      = isset( $banner['name'] ) ? sanitize_text_field( $banner['name'] ) : null;
 
 			$group_id = isset( $banner['group_id'] ) && (int) $banner['group_id'] > 0 ? (int) $banner['group_id'] : null;
 			if ( ! $group_id ) {
@@ -518,6 +519,7 @@ final class Campaign_Repository {
 					'group_id'    => $group_id,
 					'device'      => $device,
 					'image_id'    => $image_id,
+					'name'        => $name,
 					'link_url'    => $link_url,
 					'link_target' => $link_targ,
 					'link_rel'    => $link_rel,
@@ -526,7 +528,7 @@ final class Campaign_Repository {
 					'is_active'   => $is_active,
 					'created_at'  => $now,
 				],
-				[ '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%d', '%d', '%s' ]
+				[ '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s' ]
 			);
 			$order++;
 		}
@@ -563,6 +565,7 @@ final class Campaign_Repository {
 				'group_id'    => $group_id,
 				'device'      => (string) $group['device'],
 				'image_id'    => $image_id,
+				'name'        => isset( $input['name'] ) ? sanitize_text_field( $input['name'] ) : null,
 				'link_url'    => isset( $input['link_url'] ) ? esc_url_raw( $input['link_url'] ) : '',
 				'link_target' => self::sanitize_link_target( $input['link_target'] ?? '_self' ),
 				'link_rel'    => isset( $input['link_rel'] ) ? sanitize_text_field( $input['link_rel'] ) : '',
@@ -571,7 +574,7 @@ final class Campaign_Repository {
 				'is_active'   => array_key_exists( 'is_active', $input ) ? ( ! empty( $input['is_active'] ) ? 1 : 0 ) : 1,
 				'created_at'  => $now,
 			],
-			[ '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%d', '%d', '%s' ]
+			[ '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s' ]
 		);
 
 		return (int) $wpdb->insert_id;
@@ -585,6 +588,21 @@ final class Campaign_Repository {
 		$data    = [];
 		$formats = [];
 
+		if ( array_key_exists( 'name', $input ) ) {
+			$name = sanitize_text_field( (string) $input['name'] );
+			// Empty string is allowed — it means "clear the label".
+			$data['name']    = '' === $name ? null : $name;
+			$formats['name'] = '%s';
+		}
+		if ( array_key_exists( 'image_id', $input ) ) {
+			$candidate = (int) $input['image_id'];
+			// Reject anything that isn't a real image attachment. Saves
+			// us from pointing a banner at a trashed or wrong-type post.
+			if ( $candidate > 0 && wp_attachment_is_image( $candidate ) ) {
+				$data['image_id']    = $candidate;
+				$formats['image_id'] = '%d';
+			}
+		}
 		if ( array_key_exists( 'link_url', $input ) ) {
 			$data['link_url']    = esc_url_raw( (string) $input['link_url'] );
 			$formats['link_url'] = '%s';
@@ -627,6 +645,75 @@ final class Campaign_Repository {
 			[ '%d' ]
 		);
 		return false !== $updated;
+	}
+
+	/**
+	 * Rewrite banner sort_order inside a single group.
+	 * `$ids` is the new order, in order.
+	 */
+	public static function reorder_banners_in_group( int $group_id, array $ids ): void {
+		global $wpdb;
+		$table = Database_Installer::table_banners();
+		foreach ( array_values( $ids ) as $i => $id ) {
+			$wpdb->update( // phpcs:ignore WordPress.DB
+				$table,
+				[ 'sort_order' => $i ],
+				// Scope by group_id as a safety net — stops a malicious
+				// payload from reordering banners that don't belong to
+				// the group the caller named.
+				[ 'id' => (int) $id, 'group_id' => $group_id ],
+				[ '%d' ],
+				[ '%d', '%d' ]
+			);
+		}
+	}
+
+	/**
+	 * Clone a banner into the same group. Appends " (copy)" to the name
+	 * if one was set, so the admin sees a distinct label in the list.
+	 * Returns the new banner id, or null if the source doesn't exist.
+	 */
+	public static function duplicate_banner( int $banner_id ): ?int {
+		global $wpdb;
+		$table  = Database_Installer::table_banners();
+		$source = $wpdb->get_row( // phpcs:ignore WordPress.DB
+			$wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d LIMIT 1", $banner_id ),
+			ARRAY_A
+		);
+		if ( ! $source ) {
+			return null;
+		}
+
+		$group_id   = (int) $source['group_id'];
+		$next_order = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB
+			$wpdb->prepare(
+				"SELECT COALESCE(MAX(sort_order), -1) + 1 FROM {$table} WHERE group_id = %d",
+				$group_id
+			)
+		);
+
+		$name = ! empty( $source['name'] ) ? $source['name'] . ' (copy)' : null;
+
+		$wpdb->insert( // phpcs:ignore WordPress.DB
+			$table,
+			[
+				'campaign_id' => (int) $source['campaign_id'],
+				'group_id'    => $group_id,
+				'device'      => (string) $source['device'],
+				'image_id'    => (int) $source['image_id'],
+				'name'        => $name,
+				'link_url'    => (string) $source['link_url'],
+				'link_target' => (string) $source['link_target'],
+				'link_rel'    => (string) $source['link_rel'],
+				'alt_text'    => (string) $source['alt_text'],
+				'sort_order'  => $next_order,
+				'is_active'   => (int) $source['is_active'],
+				'created_at'  => current_time( 'mysql', true ),
+			],
+			[ '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s' ]
+		);
+
+		return (int) $wpdb->insert_id;
 	}
 
 	public static function delete_banner( int $banner_id ): bool {
@@ -690,6 +777,7 @@ final class Campaign_Repository {
 			'device'      => self::sanitize_device( $row['device'] ?? '' ),
 			'image_id'    => $image_id,
 			'image'       => $image,
+			'name'        => isset( $row['name'] ) ? (string) $row['name'] : '',
 			'link_url'    => (string) ( $row['link_url'] ?? '' ),
 			'link_target' => self::sanitize_link_target( $row['link_target'] ?? '_self' ),
 			'link_rel'    => (string) ( $row['link_rel'] ?? '' ),
