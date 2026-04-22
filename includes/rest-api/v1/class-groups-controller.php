@@ -90,6 +90,18 @@ final class Groups_Controller {
 				'permission_callback' => [ $this, 'permission_write' ],
 			]
 		);
+
+		// Reorder banners inside a single group in one round-trip.
+		// Body: { order: [bid, bid, bid, ...] }
+		register_rest_route(
+			$this->namespace,
+			'/groups/(?P<gid>\d+)/banners/reorder',
+			[
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => [ $this, 'reorder_banners' ],
+				'permission_callback' => [ $this, 'permission_write' ],
+			]
+		);
 	}
 
 	public function permission_read( WP_REST_Request $request ) {
@@ -176,6 +188,38 @@ final class Groups_Controller {
 			Banner_Group_Repository::list_for_campaign( $id, $device ),
 			200
 		);
+	}
+
+	public function reorder_banners( WP_REST_Request $request ) {
+		$gid     = (int) $request['gid'];
+		$payload = $this->payload( $request );
+
+		$group = Banner_Group_Repository::get( $gid );
+		if ( ! $group ) {
+			return new WP_Error( 'usc_not_found', __( 'Group not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
+		}
+
+		$order = isset( $payload['order'] ) && is_array( $payload['order'] ) ? $payload['order'] : [];
+
+		$ids = array_values(
+			array_filter(
+				array_map(
+					static function ( $v ) {
+						return (int) $v;
+					},
+					$order
+				),
+				static function ( $v ) {
+					return $v > 0;
+				}
+			)
+		);
+
+		Campaign_Repository::reorder_banners_in_group( $gid, $ids );
+
+		// Return the whole campaign so the admin can refresh its state
+		// without a second round-trip.
+		return new WP_REST_Response( Campaign_Repository::get_campaign( (int) $group['campaign_id'], true ), 200 );
 	}
 
 	public function add_banner( WP_REST_Request $request ) {

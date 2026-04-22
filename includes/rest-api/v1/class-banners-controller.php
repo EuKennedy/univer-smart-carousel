@@ -2,9 +2,13 @@
 /**
  * Per-banner REST controller (v1).
  *
- *   PUT    /usc/v1/banners/{bid}   Partial update — toggle is_active,
- *                                  change link, alt, target, sort, group.
- *   DELETE /usc/v1/banners/{bid}   Remove the banner.
+ *   PUT    /usc/v1/banners/{bid}             Partial update — toggle
+ *                                            is_active, change name,
+ *                                            image_id, link, alt, target,
+ *                                            sort, group.
+ *   DELETE /usc/v1/banners/{bid}             Remove the banner.
+ *   POST   /usc/v1/banners/{bid}/duplicate   Clone into the same group
+ *                                            (name gets " (copy)" suffix).
  *
  * @package Univer\SmartCarousel
  */
@@ -41,6 +45,16 @@ final class Banners_Controller {
 				],
 			]
 		);
+
+		register_rest_route(
+			$this->namespace,
+			'/banners/(?P<bid>\d+)/duplicate',
+			[
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => [ $this, 'duplicate_item' ],
+				'permission_callback' => [ $this, 'permission_write' ],
+			]
+		);
 	}
 
 	public function permission_write( WP_REST_Request $request ) {
@@ -64,6 +78,15 @@ final class Banners_Controller {
 			return new WP_Error( 'usc_not_found', __( 'Banner not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
 		}
 		return new WP_REST_Response( [ 'deleted' => true, 'id' => $bid ], 200 );
+	}
+
+	public function duplicate_item( WP_REST_Request $request ) {
+		$bid     = (int) $request['bid'];
+		$new_bid = Campaign_Repository::duplicate_banner( $bid );
+		if ( ! $new_bid ) {
+			return new WP_Error( 'usc_not_found', __( 'Banner not found.', 'univer-smart-carousel' ), [ 'status' => 404 ] );
+		}
+		return new WP_REST_Response( [ 'duplicated' => true, 'id' => $new_bid, 'source_id' => $bid ], 201 );
 	}
 
 	private function payload( WP_REST_Request $request ): array {
