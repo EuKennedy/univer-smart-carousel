@@ -769,13 +769,14 @@ select.usc-input {
 
 .usc-banner-card {
 	display: grid;
-	grid-template-columns: 180px 1fr auto;
-	gap: 16px;
+	grid-template-columns: 20px 180px 1fr auto;
+	gap: 14px;
+	align-items: flex-start;
 	padding: 12px;
 	background: var(--usc-color-surface);
 	border: 1px solid var(--usc-color-border);
 	border-radius: var(--usc-radius-md);
-	transition: box-shadow 160ms ease, border-color 160ms ease;
+	transition: box-shadow 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
 .usc-banner-card:hover {
@@ -784,7 +785,34 @@ select.usc-input {
 }
 
 .usc-banner-card.is-dragging {
-	opacity: 0.6;
+	opacity: 0.35;
+}
+
+.usc-banner-card.is-drop-target {
+	box-shadow: 0 0 0 2px var(--usc-color-accent);
+	transform: translateY(-1px);
+}
+
+.usc-banner-card__handle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--usc-color-text-subtle);
+	cursor: grab;
+	padding: 6px 2px;
+	border-radius: var(--usc-radius-sm);
+	user-select: none;
+	-webkit-user-select: none;
+	align-self: stretch;
+}
+
+.usc-banner-card__handle:hover {
+	color: var(--usc-color-text);
+	background: var(--usc-color-surface-2);
+}
+
+.usc-banner-card__handle:active {
+	cursor: grabbing;
 }
 
 .usc-banner-card__image {
@@ -797,6 +825,17 @@ select.usc-input {
 	overflow: hidden;
 	aspect-ratio: 16 / 9;
 	width: 100%;
+	font-family: inherit;
+	transition: transform 160ms ease;
+}
+
+.usc-banner-card__image:hover {
+	transform: scale(1.01);
+}
+
+.usc-banner-card__image:focus-visible {
+	outline: 2px solid var(--usc-color-accent);
+	outline-offset: 2px;
 }
 
 .usc-banner-card__image img {
@@ -806,6 +845,24 @@ select.usc-input {
 	display: block;
 }
 
+.usc-banner-card__image-overlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	background: rgba(15, 15, 15, 0);
+	opacity: 0;
+	transition: background 160ms ease, opacity 160ms ease;
+	pointer-events: none;
+}
+
+.usc-banner-card__image:hover .usc-banner-card__image-overlay {
+	background: rgba(15, 15, 15, 0.45);
+	opacity: 1;
+}
+
 .usc-banner-card__placeholder {
 	display: flex;
 	align-items: center;
@@ -813,20 +870,6 @@ select.usc-input {
 	height: 100%;
 	color: var(--usc-color-text-subtle);
 	font-size: 12px;
-}
-
-.usc-banner-card__handle {
-	position: absolute;
-	top: 6px;
-	right: 6px;
-	background: rgba(0, 0, 0, 0.55);
-	color: #fff;
-	width: 22px;
-	height: 22px;
-	border-radius: 4px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
 }
 
 .usc-banner-card__fields {

@@ -61,11 +61,14 @@ export const Groups = {
 	addBanner: (gid, data) => request(`/groups/${gid}/banners`, { method: 'POST', data }),
 	reorder: (campaignId, data) =>
 		request(`/campaigns/${campaignId}/groups/reorder`, { method: 'POST', data }),
+	reorderBanners: (gid, data) =>
+		request(`/groups/${gid}/banners/reorder`, { method: 'POST', data }),
 };
 
 export const Banners = {
 	update: (bid, data) => request(`/banners/${bid}`, { method: 'PUT', data }),
 	remove: (bid) => request(`/banners/${bid}`, { method: 'DELETE' }),
+	duplicate: (bid) => request(`/banners/${bid}/duplicate`, { method: 'POST' }),
 };
 
 export const Badges = {
