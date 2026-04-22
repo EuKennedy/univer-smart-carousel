@@ -101,6 +101,13 @@ final class Database_Installer {
 			$wpdb->query( "ALTER TABLE {$banners} ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER sort_order" ); // phpcs:ignore WordPress.DB
 		}
 
+		// 1.3.0 — Optional per-banner label, so admins can tag a banner
+		// with an internal name ("Promo Black Friday 50off") without
+		// touching alt_text (which is user-facing / SEO).
+		if ( ! self::column_exists( $banners, 'name' ) ) {
+			$wpdb->query( "ALTER TABLE {$banners} ADD COLUMN name VARCHAR(191) NULL DEFAULT NULL AFTER image_id" ); // phpcs:ignore WordPress.DB
+		}
+
 		// Backfill: any banner that still has NULL group_id needs a group.
 		// Group banners by (campaign_id, device) — those become "Banners"
 		// groups that the user can later rename / split.
@@ -189,6 +196,7 @@ final class Database_Installer {
 			group_id BIGINT UNSIGNED NULL,
 			device VARCHAR(10) NOT NULL,
 			image_id BIGINT UNSIGNED NOT NULL,
+			name VARCHAR(191) NULL DEFAULT NULL,
 			link_url VARCHAR(2048) NULL,
 			link_target VARCHAR(10) NOT NULL DEFAULT '_self',
 			link_rel VARCHAR(64) NULL,
