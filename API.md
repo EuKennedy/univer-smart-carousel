@@ -97,8 +97,10 @@ Base URL: `https://your-site.com/wp-json/usc/v1`
 
 | Method | Path | Scope | Description |
 | --- | --- | --- | --- |
-| PUT    | `/banners/{bid}` | write | Partial — toggle `is_active`, change `link_url`, `link_target`, `alt_text`, `sort_order`, `group_id`. |
+| PUT    | `/banners/{bid}` | write | Partial — toggle `is_active`, change `name`, `image_id` (swap image in place), `link_url`, `link_target`, `alt_text`, `sort_order`, `group_id`. |
 | DELETE | `/banners/{bid}` | write | Remove a single banner. |
+| POST   | `/banners/{bid}/duplicate` | write | Clone into the same group. `" (copy)"` is appended to the name if set. Returns `{ duplicated, id, source_id }`. |
+| POST   | `/groups/{gid}/banners/reorder` | write | Rewrite sort_order for every banner in the group. Body: `{ order: [bid, bid, ...] }`. |
 
 ### Aliases
 

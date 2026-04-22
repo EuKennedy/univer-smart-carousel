@@ -244,6 +244,14 @@ final class Translations {
 			'Failed to refresh.'      => 'Falha ao atualizar.',
 			'Failed to reorder.'      => 'Falha ao reordenar.',
 			'Drag to reorder'         => 'Arraste para reordenar',
+			'Banner name (optional)'  => 'Nome do banner (opcional)',
+			'Internal label — e.g. "Black Friday hero"' => 'Rótulo interno — ex.: "Hero Black Friday"',
+			'Duplicate banner'        => 'Duplicar banner',
+			'Banner duplicated.'      => 'Banner duplicado.',
+			'Failed to duplicate banner.' => 'Falha ao duplicar banner.',
+			'Replace banner image'    => 'Substituir imagem do banner',
+			'Click to replace image'  => 'Clique para substituir a imagem',
+			'Failed to replace image.' => 'Falha ao substituir imagem.',
 
 			// Badges page
 			'Badges'                  => 'Badges',
