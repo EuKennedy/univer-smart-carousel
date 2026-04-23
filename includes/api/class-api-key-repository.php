@@ -167,10 +167,22 @@ final class Api_Key_Repository {
 		}
 
 		foreach ( $candidates as $row ) {
-			if ( wp_check_password( $token, $row['key_hash'] ) ) {
-				self::touch( (int) $row['id'], $client_ip );
-				return self::hydrate( $row );
+			if ( ! wp_check_password( $token, $row['key_hash'] ) ) {
+				continue;
 			}
+
+			// Defense in depth: if the admin that minted this key has
+			// since been deleted from WP, treat the key as invalid. A
+			// deleted user can't log in anymore, so no credential they
+			// created should keep working either. Protects against an
+			// offboarded admin's token continuing to drive writes.
+			$creator = (int) $row['created_by'];
+			if ( $creator <= 0 || ! get_userdata( $creator ) ) {
+				return null;
+			}
+
+			self::touch( (int) $row['id'], $client_ip );
+			return self::hydrate( $row );
 		}
 
 		return null;
