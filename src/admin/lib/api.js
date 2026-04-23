@@ -70,9 +70,3 @@ export const Banners = {
 	remove: (bid) => request(`/banners/${bid}`, { method: 'DELETE' }),
 	duplicate: (bid) => request(`/banners/${bid}/duplicate`, { method: 'POST' }),
 };
-
-export const Badges = {
-	list: (taxonomy = 'pa_badge-ofertas') =>
-		request(`/badges?taxonomy=${encodeURIComponent(taxonomy)}`),
-	update: (termId, data) => request(`/badges/${termId}`, { method: 'PUT', data }),
-};
