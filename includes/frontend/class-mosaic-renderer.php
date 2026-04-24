@@ -73,24 +73,35 @@ final class Mosaic_Renderer {
 		}
 		unset( $item );
 
-		$layout = isset( $settings['layout'] ) ? (string) $settings['layout'] : 'hero-top';
-		$cols   = (int) $settings['cols_desktop'];
-		$total  = count( $items );
+		// Layouts are independent per breakpoint. Fallback chain keeps
+		// pre-1.8.2 mosaics rendering with whatever single `layout` they
+		// had stored, so nothing visually shifts on upgrade.
+		$legacy_layout = isset( $settings['layout'] ) ? (string) $settings['layout'] : 'hero-top';
+		$layout_d      = isset( $settings['layout_desktop'] ) ? (string) $settings['layout_desktop'] : $legacy_layout;
+		$layout_m      = isset( $settings['layout_mobile'] ) ? (string) $settings['layout_mobile'] : $legacy_layout;
+		$cols_d        = (int) $settings['cols_desktop'];
+		$cols_m        = (int) $settings['cols_mobile'];
+		$total         = count( $items );
 
 		$dom_id = 'usc-mosaic-' . sanitize_html_class( $mosaic['slug'] ) . '-' . substr( wp_generate_uuid4(), 0, 8 );
 
 		$style_parts = [
-			'--usc-cols:' . $cols,
-			'--usc-cols-m:' . (int) $settings['cols_mobile'],
+			'--usc-cols:' . $cols_d,
+			'--usc-cols-m:' . $cols_m,
 			'--usc-gap:' . (int) $settings['gap'] . 'px',
 			'--usc-radius:' . (int) $settings['border_radius'] . 'px',
 		];
 		$style_attr = esc_attr( implode( ';', $style_parts ) );
 
-		// Non-custom presets use `grid-auto-flow: dense` so small cells
-		// can pack into holes left by big cells (featured-right etc.).
-		// The --layout-* modifier class switches that on in CSS.
-		$classes = [ 'usc-mosaic', 'usc-mosaic--layout-' . sanitize_html_class( $layout ) ];
+		// Two modifier classes — one per breakpoint — drive
+		// `grid-auto-flow: dense` on the correct viewport without
+		// leaking into the other. CSS switches which set of span
+		// custom properties each cell reads.
+		$classes = [
+			'usc-mosaic',
+			'usc-mosaic--d-' . sanitize_html_class( $layout_d ),
+			'usc-mosaic--m-' . sanitize_html_class( $layout_m ),
+		];
 
 		ob_start();
 		?>
@@ -98,12 +109,13 @@ final class Mosaic_Renderer {
 	id="<?php echo esc_attr( $dom_id ); ?>"
 	class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>"
 	data-usc-mosaic
-	data-usc-layout="<?php echo esc_attr( $layout ); ?>"
+	data-usc-layout-desktop="<?php echo esc_attr( $layout_d ); ?>"
+	data-usc-layout-mobile="<?php echo esc_attr( $layout_m ); ?>"
 	style="<?php echo $style_attr; ?>"
 	aria-label="<?php echo esc_attr( $mosaic['name'] ); ?>"
 >
 	<?php foreach ( $items as $index => $item ) : ?>
-		<?php echo self::render_item( $item, $index, $total, $layout, $cols ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<?php echo self::render_item( $item, $index, $total, $layout_d, $layout_m, $cols_d, $cols_m ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 	<?php endforeach; ?>
 </section>
 		<?php
@@ -165,14 +177,17 @@ final class Mosaic_Renderer {
 
 			case 'custom':
 			default:
+				// Clamp the stored col_span to the cols available on
+				// this breakpoint — otherwise a user with col_span=3
+				// and cols_mobile=2 would overflow the mobile grid.
 				return [
-					'col_span' => max( 1, (int) ( $item['col_span'] ?? 1 ) ),
+					'col_span' => max( 1, min( $cols, (int) ( $item['col_span'] ?? 1 ) ) ),
 					'row_span' => max( 1, (int) ( $item['row_span'] ?? 1 ) ),
 				];
 		}
 	}
 
-	private static function render_item( array $item, int $index, int $total = 1, string $layout = 'custom', int $cols = 3 ): string {
+	private static function render_item( array $item, int $index, int $total = 1, string $layout_d = 'custom', string $layout_m = 'custom', int $cols_d = 3, int $cols_m = 2 ): string {
 		$image = $item['image'];
 		if ( ! $image ) {
 			return '';
@@ -222,14 +237,18 @@ final class Mosaic_Renderer {
 			? 'auto'
 			: str_replace( '/', ' / ', (string) $item['aspect_ratio'] );
 
-		// Spans come from the active layout preset. `custom` falls back
-		// to the item's stored col_span / row_span for backwards compat.
-		$spans = self::resolve_spans( $item, $index, $total, $layout, $cols );
+		// Spans are computed per breakpoint — the cell ships four custom
+		// properties and CSS picks which pair to use at each viewport.
+		// `custom` falls back to the item's stored col_span / row_span.
+		$spans_d = self::resolve_spans( $item, $index, $total, $layout_d, $cols_d );
+		$spans_m = self::resolve_spans( $item, $index, $total, $layout_m, $cols_m );
 
 		$cell_style = sprintf(
-			'--span-col:%d;--span-row:%d;--aspect:%s;',
-			$spans['col_span'],
-			$spans['row_span'],
+			'--span-col-d:%d;--span-row-d:%d;--span-col-m:%d;--span-row-m:%d;--aspect:%s;',
+			$spans_d['col_span'],
+			$spans_d['row_span'],
+			$spans_m['col_span'],
+			$spans_m['row_span'],
 			esc_attr( $aspect_css )
 		);
 

@@ -313,17 +313,18 @@
 	contain: layout paint;
 }
 
-/* Layout presets: the renderer computes spans from item position, so
- * the grid never ends up with leftover holes. `dense` auto-flow lets
- * small cells slot into any gap a featured cell might leave behind
- * (the `featured-*` presets depend on this). `custom` keeps the
- * classic row-flow so power users stay in control of placement. */
-.usc-mosaic--layout-hero-top,
-.usc-mosaic--layout-hero-bottom,
-.usc-mosaic--layout-featured-left,
-.usc-mosaic--layout-featured-right,
-.usc-mosaic--layout-alternating,
-.usc-mosaic--layout-uniform {
+/* Layout presets: independent per breakpoint. The renderer computes
+ * col/row spans from item position for each viewport, so the grid
+ * never ends up with leftover holes. `dense` auto-flow lets small
+ * cells slot into any gap a featured cell might leave behind (the
+ * `featured-*` presets depend on this). `custom` keeps the classic
+ * row-flow so power users stay in control of placement. */
+.usc-mosaic--d-hero-top,
+.usc-mosaic--d-hero-bottom,
+.usc-mosaic--d-featured-left,
+.usc-mosaic--d-featured-right,
+.usc-mosaic--d-alternating,
+.usc-mosaic--d-uniform {
 	grid-auto-flow: dense;
 }
 
@@ -338,8 +339,10 @@
 	overflow: hidden;
 	border-radius: var(--usc-radius, 12px);
 	background: #f5f5f4;
-	grid-column: span var(--span-col, 1);
-	grid-row: span var(--span-row, 1);
+	/* Desktop spans come from --span-col-d / --span-row-d.
+	 * The mobile media query below swaps in the -m pair. */
+	grid-column: span var(--span-col-d, 1);
+	grid-row: span var(--span-row-d, 1);
 	text-decoration: none;
 	color: inherit;
 	display: block;
@@ -410,11 +413,23 @@ a.usc-mosaic__item:focus-visible .usc-mosaic__image {
 	.usc-mosaic {
 		grid-template-columns: repeat(var(--usc-cols-m, 2), 1fr);
 	}
-	/* Cap oversized bento spans on narrow viewports — a 4-col-span
-	 * item on a 2-col grid would leave a whole row with just one
-	 * cell and reserve that full ratio's height. Clamp to min(span, cols). */
+	/* On mobile the cell reads its own set of spans. Those are
+	 * already computed against cols_mobile server-side, so no
+	 * clamping is needed here. */
 	.usc-mosaic__item {
-		grid-column: span min(var(--span-col, 1), var(--usc-cols-m, 2));
+		grid-column: span var(--span-col-m, 1);
+		grid-row: span var(--span-row-m, 1);
+	}
+	/* Mobile-side auto-flow: if a mobile preset places a featured
+	 * cell that leaves holes, dense-pack the small cells into them.
+	 * Desktop auto-flow-dense is applied above via the --d- classes. */
+	.usc-mosaic--m-hero-top,
+	.usc-mosaic--m-hero-bottom,
+	.usc-mosaic--m-featured-left,
+	.usc-mosaic--m-featured-right,
+	.usc-mosaic--m-alternating,
+	.usc-mosaic--m-uniform {
+		grid-auto-flow: dense;
 	}
 }
 
