@@ -282,6 +282,9 @@ final class Translations {
 			'Drag to reorder. Click a thumbnail to replace the image. The chosen Format handles sizes for you.' => 'Arraste para reordenar. Clique em uma imagem para substituí-la. O Formato escolhido cuida dos tamanhos pra você.',
 			// Layout presets
 			'Format'                    => 'Formato',
+			'Format (desktop)'          => 'Formato (desktop)',
+			'Format (mobile)'           => 'Formato (mobile)',
+			'Desktop and mobile pick their format independently — pair a wide hero on desktop with a stacked hero on mobile, or any mix.' => 'Desktop e mobile escolhem o formato de forma independente — combine um hero largo no desktop com um hero empilhado no mobile, ou qualquer mistura.',
 			'Hero on top'               => 'Destaque em cima',
 			'First item full-width, the rest are equal cards below.' => 'Primeiro item em largura total; os demais ficam como cards iguais embaixo.',
 			'Hero at the bottom'        => 'Destaque embaixo',

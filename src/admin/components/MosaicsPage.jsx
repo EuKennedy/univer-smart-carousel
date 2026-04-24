@@ -410,7 +410,8 @@ function MosaicEditor({ mosaic, onChange, onSave, onDelete, saving }) {
 							onItemsChange={(items) => onChange({ ...mosaic, items })}
 							onRefresh={refreshFromServer}
 							cols={settings.cols_desktop}
-							layout={settings.layout || 'hero-top'}
+							layoutDesktop={settings.layout_desktop || settings.layout || 'hero-top'}
+							layoutMobile={settings.layout_mobile || settings.layout || 'hero-top'}
 						/>
 					</Card>
 				</div>
@@ -469,18 +470,42 @@ function MosaicEditor({ mosaic, onChange, onSave, onDelete, saving }) {
 					</Card>
 
 					<Card>
-						<SectionHeader title={__('Layout', 'univer-smart-carousel')} />
+						<SectionHeader
+							title={__('Layout', 'univer-smart-carousel')}
+							description={__(
+								'Desktop and mobile pick their format independently — pair a wide hero on desktop with a stacked hero on mobile, or any mix.',
+								'univer-smart-carousel'
+							)}
+						/>
 						<div className="usc-stack">
-							<Select
-								label={__('Format', 'univer-smart-carousel')}
-								hint={
-									LAYOUT_OPTIONS.find((o) => o.value === (settings.layout || 'hero-top'))
-										?.hint
-								}
-								options={LAYOUT_OPTIONS.map(({ value, label }) => ({ value, label }))}
-								value={settings.layout || 'hero-top'}
-								onChange={(v) => setSetting({ layout: v })}
-							/>
+							<div className="usc-row-2">
+								<Select
+									label={__('Format (desktop)', 'univer-smart-carousel')}
+									hint={
+										LAYOUT_OPTIONS.find(
+											(o) =>
+												o.value ===
+												(settings.layout_desktop || settings.layout || 'hero-top')
+										)?.hint
+									}
+									options={LAYOUT_OPTIONS.map(({ value, label }) => ({ value, label }))}
+									value={settings.layout_desktop || settings.layout || 'hero-top'}
+									onChange={(v) => setSetting({ layout_desktop: v })}
+								/>
+								<Select
+									label={__('Format (mobile)', 'univer-smart-carousel')}
+									hint={
+										LAYOUT_OPTIONS.find(
+											(o) =>
+												o.value ===
+												(settings.layout_mobile || settings.layout || 'hero-top')
+										)?.hint
+									}
+									options={LAYOUT_OPTIONS.map(({ value, label }) => ({ value, label }))}
+									value={settings.layout_mobile || settings.layout || 'hero-top'}
+									onChange={(v) => setSetting({ layout_mobile: v })}
+								/>
+							</div>
 							<div className="usc-row-2">
 								<Select
 									label={__('Columns (desktop)', 'univer-smart-carousel')}
@@ -625,8 +650,20 @@ function MosaicEditor({ mosaic, onChange, onSave, onDelete, saving }) {
  * Items manager (drag + reorder + replace + duplicate)
  * ============================================================ */
 
-function MosaicItemsManager({ mosaicId, items, onItemsChange, onRefresh, cols, layout = 'hero-top' }) {
-	const isCustomLayout = layout === 'custom';
+function MosaicItemsManager({
+	mosaicId,
+	items,
+	onItemsChange,
+	onRefresh,
+	cols,
+	layoutDesktop = 'hero-top',
+	layoutMobile = 'hero-top',
+}) {
+	// Per-item col/row span controls only surface when at least one
+	// of the two breakpoints is in "Free (manual)" mode — otherwise
+	// the chosen presets compute spans from position and the inputs
+	// would be no-ops.
+	const isCustomLayout = layoutDesktop === 'custom' || layoutMobile === 'custom';
 	const [dragItem, setDragItem] = useState(null);
 	const [dropTargetId, setDropTargetId] = useState(null);
 	const [confirmDelete, setConfirmDelete] = useState(null);
