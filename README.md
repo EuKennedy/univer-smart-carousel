@@ -54,7 +54,7 @@ If you're not on Elementor, the same principle applies: wrap each shortcode in a
 The plugin ships two independent rendering surfaces, each with its own admin tab and shortcode family:
 
 - **Carousels** (`[carouseldesktop_slug]` + `[carouselmobile_slug]`) — the horizontally-scrolling hero banners described above.
-- **Mosaics** (`[mosaic_slug]`) — a CSS Grid / bento layout for photo walls. Pick a **Format** (hero on top, featured on the left, uniform grid, alternating rhythm, or free-form) and the renderer handles the per-cell math for you. Mobile cap on columns is independent, so the layout reflows cleanly.
+- **Mosaics** (`[mosaic_slug]`) — a CSS Grid / bento layout for photo walls. Pick a **Format** (hero on top, featured on the left, uniform grid, alternating rhythm, or free-form) and the renderer handles the per-cell math for you. Desktop and mobile pick their format **independently** — one item list, two totally different layouts (e.g. 3 equal cards on desktop, big hero + 2 cards stacked on mobile).
 
 Both surfaces reuse the same image optimization pipeline, the same API key infrastructure, and the same admin chrome. Pick whichever fits the spot you're filling.
 
