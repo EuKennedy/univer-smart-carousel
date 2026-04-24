@@ -56,10 +56,11 @@ final class Mosaic_Repository {
 	 */
 	public static function default_settings(): array {
 		return [
-			// Preset drives col_span/row_span per item. "hero-top" is the
-			// safest default — first item goes full-width, rest are 1x1.
-			// Always produces a clean grid with no holes.
-			'layout'                  => self::LAYOUT_HERO_TOP,
+			// Layout presets are independent per breakpoint so a mosaic
+			// can read as "3 side-by-side cards" on desktop while still
+			// showing a tall hero + 2 cards on mobile (the common case).
+			'layout_desktop'          => self::LAYOUT_HERO_TOP,
+			'layout_mobile'           => self::LAYOUT_HERO_TOP,
 			'cols_desktop'            => 3,
 			'cols_mobile'             => 2,
 			'gap'                     => 12,
@@ -79,8 +80,17 @@ final class Mosaic_Repository {
 		$input    = is_array( $input ) ? $input : [];
 		$out      = [];
 
-		$layout         = isset( $input['layout'] ) ? sanitize_key( (string) $input['layout'] ) : $defaults['layout'];
-		$out['layout']  = in_array( $layout, self::ALLOWED_LAYOUTS, true ) ? $layout : $defaults['layout'];
+		// Backwards compat: mosaics saved before 1.8.2 used a single
+		// `layout` key that applied to both breakpoints. Mirror it into
+		// both new keys so upgrades don't visually change existing sites
+		// until the user picks something different.
+		$legacy_layout = isset( $input['layout'] ) ? sanitize_key( (string) $input['layout'] ) : '';
+		$legacy_layout = in_array( $legacy_layout, self::ALLOWED_LAYOUTS, true ) ? $legacy_layout : '';
+
+		$layout_d              = isset( $input['layout_desktop'] ) ? sanitize_key( (string) $input['layout_desktop'] ) : $legacy_layout;
+		$layout_m              = isset( $input['layout_mobile'] ) ? sanitize_key( (string) $input['layout_mobile'] ) : $legacy_layout;
+		$out['layout_desktop'] = in_array( $layout_d, self::ALLOWED_LAYOUTS, true ) ? $layout_d : $defaults['layout_desktop'];
+		$out['layout_mobile']  = in_array( $layout_m, self::ALLOWED_LAYOUTS, true ) ? $layout_m : $defaults['layout_mobile'];
 
 		$out['cols_desktop'] = max( 1, min( 6, (int) ( $input['cols_desktop'] ?? $defaults['cols_desktop'] ) ) );
 		$out['cols_mobile']  = max( 1, min( 4, (int) ( $input['cols_mobile'] ?? $defaults['cols_mobile'] ) ) );
