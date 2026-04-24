@@ -92,6 +92,7 @@ final class Mosaic_Item_Repository {
 			[ '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d', '%d', '%s' ]
 		);
 
+		do_action( 'usc_content_changed' );
 		return (int) $wpdb->insert_id;
 	}
 
@@ -163,16 +164,19 @@ final class Mosaic_Item_Repository {
 			array_values( $formats ),
 			[ '%d' ]
 		);
+		do_action( 'usc_content_changed' );
 		return false !== $updated;
 	}
 
 	public static function delete( int $id ): bool {
 		global $wpdb;
-		return (bool) $wpdb->delete( // phpcs:ignore WordPress.DB
+		$ok = (bool) $wpdb->delete( // phpcs:ignore WordPress.DB
 			Database_Installer::table_mosaic_items(),
 			[ 'id' => $id ],
 			[ '%d' ]
 		);
+		do_action( 'usc_content_changed' );
+		return $ok;
 	}
 
 	/**
@@ -192,6 +196,7 @@ final class Mosaic_Item_Repository {
 				[ '%d', '%d' ]
 			);
 		}
+		do_action( 'usc_content_changed' );
 	}
 
 	/**
@@ -238,6 +243,7 @@ final class Mosaic_Item_Repository {
 			],
 			[ '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d', '%d', '%s' ]
 		);
+		do_action( 'usc_content_changed' );
 		return (int) $wpdb->insert_id;
 	}
 

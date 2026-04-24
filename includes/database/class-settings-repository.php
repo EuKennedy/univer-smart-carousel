@@ -50,6 +50,7 @@ final class Settings_Repository {
 		$merged  = array_merge( $current, array_intersect_key( $input, $current ) );
 		$clean   = self::sanitize( $merged );
 		update_option( self::OPTION_KEY, $clean, true );
+		do_action( 'usc_content_changed' );
 		return $clean;
 	}
 

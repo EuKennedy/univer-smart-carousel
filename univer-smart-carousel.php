@@ -3,7 +3,7 @@
  * Plugin Name:       Univer Smart Carousel
  * Plugin URI:        https://github.com/EuKennedy/univer-smart-carousel
  * Description:       Lightweight, premium, web-vitals-friendly banner carousel for WordPress and WooCommerce. Marketing teams create campaigns and ship banners with a single shortcode — desktop and mobile, fully separated.
- * Version:           1.8.2
+ * Version:           1.8.3
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Kennedy Rodrigues Gomes Teixeira
@@ -22,7 +22,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'USC_VERSION', '1.8.2' );
+define( 'USC_VERSION', '1.8.3' );
 define( 'USC_PLUGIN_FILE', __FILE__ );
 define( 'USC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'USC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -42,8 +42,17 @@ define( 'USC_ADMIN_CAPABILITY', 'manage_options' );
 
 require_once USC_PLUGIN_DIR . 'includes/autoload.php';
 
-register_activation_hook( __FILE__, [ \Univer\SmartCarousel\Database\Database_Installer::class, 'install' ] );
-register_deactivation_hook( __FILE__, [ \Univer\SmartCarousel\Database\Database_Installer::class, 'deactivate' ] );
+register_activation_hook( __FILE__, static function () {
+	\Univer\SmartCarousel\Database\Database_Installer::install();
+	// Flush every cache layer we can reach, so the freshly-installed
+	// shortcodes render immediately instead of waiting behind a stale
+	// page cache.
+	\Univer\SmartCarousel\Cache\Cache_Purger::purge_all( true );
+} );
+register_deactivation_hook( __FILE__, static function () {
+	\Univer\SmartCarousel\Database\Database_Installer::deactivate();
+	\Univer\SmartCarousel\Cache\Cache_Purger::purge_all( true );
+} );
 
 add_action( 'plugins_loaded', static function () {
 	\Univer\SmartCarousel\Plugin::instance();

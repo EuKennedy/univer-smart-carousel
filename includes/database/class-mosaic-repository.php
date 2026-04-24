@@ -280,6 +280,7 @@ final class Mosaic_Repository {
 		);
 
 		self::flush_slug_cache();
+		do_action( 'usc_content_changed' );
 		return (int) $wpdb->insert_id;
 	}
 
@@ -339,6 +340,7 @@ final class Mosaic_Repository {
 		);
 
 		self::flush_slug_cache();
+		do_action( 'usc_content_changed' );
 		return true;
 	}
 
@@ -355,6 +357,7 @@ final class Mosaic_Repository {
 			[ '%d' ]
 		);
 		self::flush_slug_cache();
+		do_action( 'usc_content_changed' );
 		return $ok;
 	}
 

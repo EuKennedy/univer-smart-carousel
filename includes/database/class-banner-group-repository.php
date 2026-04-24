@@ -87,7 +87,11 @@ final class Banner_Group_Repository {
 			[ '%d', '%s', '%s', '%d', '%d', '%s', '%s' ]
 		);
 
-		return $ok ? (int) $wpdb->insert_id : null;
+		if ( $ok ) {
+			do_action( 'usc_content_changed' );
+			return (int) $wpdb->insert_id;
+		}
+		return null;
 	}
 
 	/**
@@ -133,6 +137,7 @@ final class Banner_Group_Repository {
 			array_values( $formats ),
 			[ '%d' ]
 		);
+		do_action( 'usc_content_changed' );
 		return true;
 	}
 
@@ -151,6 +156,7 @@ final class Banner_Group_Repository {
 			[ 'id' => $id ],
 			[ '%d' ]
 		);
+		do_action( 'usc_content_changed' );
 		return (bool) $ok;
 	}
 
@@ -170,6 +176,7 @@ final class Banner_Group_Repository {
 				[ '%d', '%d', '%s' ]
 			);
 		}
+		do_action( 'usc_content_changed' );
 	}
 
 	private static function next_sort_order( int $campaign_id, string $device ): int {

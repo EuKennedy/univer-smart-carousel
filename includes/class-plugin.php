@@ -42,6 +42,20 @@ final class Plugin {
 		// Run database upgrades opportunistically (cheap, idempotent).
 		add_action( 'init', [ Database\Database_Installer::class, 'maybe_upgrade' ], 1 );
 
+		// Detect a plugin version change and auto-purge every cache
+		// layer we can reach — including OPcache. Without this, every
+		// plugin update forces site owners to manually flush WP
+		// Rocket / LiteSpeed / Cloudflare / etc. before the new HTML
+		// surfaces on the frontend.
+		add_action( 'init', [ Cache\Cache_Purger::class, 'maybe_purge_on_upgrade' ], 2 );
+
+		// Every repo write fires `usc_content_changed` at the end of
+		// its mutation — listen here and dump every cache so the
+		// change is visible on the next pageview without anyone
+		// having to touch a cache plugin manually. Purger has a
+		// per-request guard so back-to-back writes don't pile on.
+		add_action( 'usc_content_changed', [ Cache\Cache_Purger::class, 'purge_all' ] );
+
 		// Translations have to be wired up before the first __() call from
 		// any of the other subsystems, hence the early registration here.
 		$this->subsystems['i18n']      = new I18n\Translations();

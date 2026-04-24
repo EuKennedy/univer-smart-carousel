@@ -383,6 +383,7 @@ final class Campaign_Repository {
 		$wpdb->insert( $table, $data, [ '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ] ); // phpcs:ignore
 
 		self::flush_slug_cache();
+		do_action( 'usc_content_changed' );
 
 		return (int) $wpdb->insert_id;
 	}
@@ -454,6 +455,7 @@ final class Campaign_Repository {
 		$wpdb->update( $table, $data, [ 'id' => $id ], array_values( $formats ), [ '%d' ] ); // phpcs:ignore
 
 		self::flush_slug_cache();
+		do_action( 'usc_content_changed' );
 
 		return true;
 	}
@@ -469,6 +471,7 @@ final class Campaign_Repository {
 		$ok = (bool) $wpdb->delete( $campaigns, [ 'id' => $id ], [ '%d' ] ); // phpcs:ignore
 
 		self::flush_slug_cache();
+		do_action( 'usc_content_changed' );
 		return $ok;
 	}
 
@@ -532,6 +535,7 @@ final class Campaign_Repository {
 			);
 			$order++;
 		}
+		do_action( 'usc_content_changed' );
 	}
 
 	/**
@@ -577,6 +581,7 @@ final class Campaign_Repository {
 			[ '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s' ]
 		);
 
+		do_action( 'usc_content_changed' );
 		return (int) $wpdb->insert_id;
 	}
 
@@ -644,6 +649,7 @@ final class Campaign_Repository {
 			array_values( $formats ),
 			[ '%d' ]
 		);
+		do_action( 'usc_content_changed' );
 		return false !== $updated;
 	}
 
@@ -666,6 +672,7 @@ final class Campaign_Repository {
 				[ '%d', '%d' ]
 			);
 		}
+		do_action( 'usc_content_changed' );
 	}
 
 	/**
@@ -713,16 +720,19 @@ final class Campaign_Repository {
 			[ '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s' ]
 		);
 
+		do_action( 'usc_content_changed' );
 		return (int) $wpdb->insert_id;
 	}
 
 	public static function delete_banner( int $banner_id ): bool {
 		global $wpdb;
-		return (bool) $wpdb->delete( // phpcs:ignore WordPress.DB
+		$ok = (bool) $wpdb->delete( // phpcs:ignore WordPress.DB
 			Database_Installer::table_banners(),
 			[ 'id' => $banner_id ],
 			[ '%d' ]
 		);
+		do_action( 'usc_content_changed' );
+		return $ok;
 	}
 
 	/**
