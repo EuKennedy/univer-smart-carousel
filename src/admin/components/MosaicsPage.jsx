@@ -86,8 +86,8 @@ const LAYOUT_OPTIONS = [
 	},
 	{
 		value: 'uniform',
-		label: __('Uniform grid', 'univer-smart-carousel'),
-		hint: __('Every cell is the same size — like an Instagram grid.', 'univer-smart-carousel'),
+		label: __('Side by side', 'univer-smart-carousel'),
+		hint: __('Images line up in equal-size cards, side by side — [] [] [].', 'univer-smart-carousel'),
 	},
 	{
 		value: 'custom',
