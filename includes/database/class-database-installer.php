@@ -50,6 +50,22 @@ final class Database_Installer {
 	}
 
 	/**
+	 * Returns prefixed table name for mosaics.
+	 */
+	public static function table_mosaics(): string {
+		global $wpdb;
+		return $wpdb->prefix . USC_TABLE_MOSAICS;
+	}
+
+	/**
+	 * Returns prefixed table name for mosaic items.
+	 */
+	public static function table_mosaic_items(): string {
+		global $wpdb;
+		return $wpdb->prefix . USC_TABLE_MOSAIC_ITEMS;
+	}
+
+	/**
 	 * Run on activation. Creates tables if missing, stores version.
 	 */
 	public static function install(): void {
@@ -251,9 +267,55 @@ final class Database_Installer {
 			KEY active (campaign_id, is_active)
 		) {$charset_collate};";
 
+		$mosaics       = self::table_mosaics();
+		$mosaic_items  = self::table_mosaic_items();
+
+		// Mosaics: a photo grid / bento layout. Independent surface from
+		// carousels — same image optimization plumbing, totally different
+		// render (CSS Grid with col-span / row-span instead of a
+		// horizontally-scrolling strip).
+		$sql_mosaics = "CREATE TABLE {$mosaics} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			name VARCHAR(191) NOT NULL,
+			slug VARCHAR(191) NOT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'draft',
+			settings LONGTEXT NULL,
+			created_at DATETIME NULL DEFAULT NULL,
+			updated_at DATETIME NULL DEFAULT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY slug (slug),
+			KEY status (status)
+		) {$charset_collate};";
+
+		// Mosaic items: one image cell in the grid. col_span / row_span
+		// let a single item occupy multiple columns / rows (bento-style
+		// layout), so the same data model covers uniform grids AND
+		// "big hero + two side cards" compositions.
+		$sql_mosaic_items = "CREATE TABLE {$mosaic_items} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			mosaic_id BIGINT UNSIGNED NOT NULL,
+			image_id BIGINT UNSIGNED NOT NULL,
+			name VARCHAR(191) NULL DEFAULT NULL,
+			link_url VARCHAR(2048) NULL,
+			link_target VARCHAR(10) NOT NULL DEFAULT '_self',
+			link_rel VARCHAR(64) NULL,
+			alt_text VARCHAR(255) NULL,
+			col_span INT NOT NULL DEFAULT 1,
+			row_span INT NOT NULL DEFAULT 1,
+			aspect_ratio VARCHAR(32) NOT NULL DEFAULT 'auto',
+			sort_order INT NOT NULL DEFAULT 0,
+			is_active TINYINT(1) NOT NULL DEFAULT 1,
+			created_at DATETIME NULL DEFAULT NULL,
+			PRIMARY KEY  (id),
+			KEY mosaic_sort (mosaic_id, sort_order),
+			KEY image_id (image_id)
+		) {$charset_collate};";
+
 		dbDelta( $sql_campaigns );
 		dbDelta( $sql_banners );
 		dbDelta( $sql_api_keys );
 		dbDelta( $sql_banner_groups );
+		dbDelta( $sql_mosaics );
+		dbDelta( $sql_mosaic_items );
 	}
 }
