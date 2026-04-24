@@ -40,10 +40,21 @@ final class Frontend_Loader {
 	}
 
 	public function maybe_enqueue(): void {
-		if ( ! Carousel_Renderer::is_in_use() ) {
+		$carousel_used = Carousel_Renderer::is_in_use();
+		$mosaic_used   = Mosaic_Renderer::is_in_use();
+
+		if ( ! $carousel_used && ! $mosaic_used ) {
 			return;
 		}
+
+		// CSS is shared: the same bundle holds carousel + mosaic styles
+		// (no point splitting a 4 KB file).
 		wp_enqueue_style( self::HANDLE_CSS );
-		wp_enqueue_script( self::HANDLE_JS );
+
+		// JS only ships when a carousel is on the page. Mosaics are
+		// pure CSS Grid — they don't need JavaScript to work.
+		if ( $carousel_used ) {
+			wp_enqueue_script( self::HANDLE_JS );
+		}
 	}
 }

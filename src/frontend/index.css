@@ -280,3 +280,133 @@
 		transition: none;
 	}
 }
+
+
+/* ============================================================================
+ * MOSAIC (photo grid / bento layout)
+ * ============================================================================
+ *
+ * Root-scoped CSS custom properties drive the grid:
+ *   --usc-cols      : columns at desktop breakpoint
+ *   --usc-cols-m    : columns at mobile breakpoint (< 768px)
+ *   --usc-gap       : gap between cells, in pixels
+ *   --usc-radius    : border-radius for each cell
+ *
+ * Per-item properties drive the bento spans and aspect ratios:
+ *   --span-col      : grid-column span (1..N)
+ *   --span-row      : grid-row span (1..N)
+ *   --aspect        : aspect-ratio value ("16 / 9") or "auto"
+ *
+ * Themes like Woodmart / Astra / OceanWP aggressively reset images
+ * inside .entry-content. The !important declarations on the cell
+ * image are intentional defense.
+ */
+
+.usc-mosaic {
+	display: grid;
+	grid-template-columns: repeat(var(--usc-cols, 3), 1fr);
+	gap: var(--usc-gap, 12px);
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+	font-family: inherit;
+	contain: layout paint;
+}
+
+.usc-mosaic *,
+.usc-mosaic *::before,
+.usc-mosaic *::after {
+	box-sizing: border-box;
+}
+
+.usc-mosaic__item {
+	position: relative;
+	overflow: hidden;
+	border-radius: var(--usc-radius, 12px);
+	background: #f5f5f4;
+	grid-column: span var(--span-col, 1);
+	grid-row: span var(--span-row, 1);
+	text-decoration: none;
+	color: inherit;
+	display: block;
+	transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Fixed-aspect mode: reserve height with ::before and absolutely
+ * position the picture/img inside it. */
+.usc-mosaic__item:not(.usc-mosaic__item--auto-aspect)::before {
+	content: '';
+	display: block;
+	width: 100%;
+	aspect-ratio: var(--aspect, 1 / 1);
+}
+
+.usc-mosaic__item:not(.usc-mosaic__item--auto-aspect) picture,
+.usc-mosaic__item:not(.usc-mosaic__item--auto-aspect) .usc-mosaic__image {
+	position: absolute !important;
+	inset: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	max-width: none !important;
+	max-height: none !important;
+	object-fit: cover !important;
+	object-position: center center;
+	margin: 0 !important;
+	padding: 0 !important;
+	display: block;
+}
+
+/* Auto-aspect mode: the image's intrinsic ratio drives the cell
+ * height. Useful when every image is already cropped the same way
+ * (all 4:5 product photos, for example). */
+.usc-mosaic__item--auto-aspect picture,
+.usc-mosaic__item--auto-aspect .usc-mosaic__image {
+	display: block !important;
+	width: 100% !important;
+	height: auto !important;
+	max-width: 100% !important;
+	max-height: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+/* Hover on linkable items only — non-link <div> cells stay static. */
+a.usc-mosaic__item:hover,
+a.usc-mosaic__item:focus-visible {
+	box-shadow: 0 12px 32px -16px rgba(15, 15, 15, 0.22);
+	transform: translateY(-2px);
+}
+
+a.usc-mosaic__item:focus-visible {
+	outline: 2px solid #2563eb;
+	outline-offset: 3px;
+}
+
+a.usc-mosaic__item .usc-mosaic__image {
+	transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+a.usc-mosaic__item:hover .usc-mosaic__image,
+a.usc-mosaic__item:focus-visible .usc-mosaic__image {
+	transform: scale(1.04);
+}
+
+@media (max-width: 768px) {
+	.usc-mosaic {
+		grid-template-columns: repeat(var(--usc-cols-m, 2), 1fr);
+	}
+	/* Cap oversized bento spans on narrow viewports — a 4-col-span
+	 * item on a 2-col grid would leave a whole row with just one
+	 * cell and reserve that full ratio's height. Clamp to min(span, cols). */
+	.usc-mosaic__item {
+		grid-column: span min(var(--span-col, 1), var(--usc-cols-m, 2));
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.usc-mosaic__item,
+	.usc-mosaic__item .usc-mosaic__image {
+		transition: none;
+	}
+}
