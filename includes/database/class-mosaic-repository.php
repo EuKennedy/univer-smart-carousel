@@ -22,6 +22,32 @@ final class Mosaic_Repository {
 	private const ALLOWED_STATUSES = [ self::STATUS_DRAFT, self::STATUS_ACTIVE, self::STATUS_PAUSED ];
 
 	/**
+	 * Layout presets. Each preset computes col_span/row_span per cell
+	 * from its position in the grid, freeing the user from having to
+	 * do bento math. `custom` is the escape hatch that keeps the old
+	 * per-item controls.
+	 *
+	 * Shape of each cell is resolved in Mosaic_Renderer::resolve_spans().
+	 */
+	public const LAYOUT_HERO_TOP       = 'hero-top';
+	public const LAYOUT_HERO_BOTTOM    = 'hero-bottom';
+	public const LAYOUT_FEATURED_LEFT  = 'featured-left';
+	public const LAYOUT_FEATURED_RIGHT = 'featured-right';
+	public const LAYOUT_ALTERNATING    = 'alternating';
+	public const LAYOUT_UNIFORM        = 'uniform';
+	public const LAYOUT_CUSTOM         = 'custom';
+
+	private const ALLOWED_LAYOUTS = [
+		self::LAYOUT_HERO_TOP,
+		self::LAYOUT_HERO_BOTTOM,
+		self::LAYOUT_FEATURED_LEFT,
+		self::LAYOUT_FEATURED_RIGHT,
+		self::LAYOUT_ALTERNATING,
+		self::LAYOUT_UNIFORM,
+		self::LAYOUT_CUSTOM,
+	];
+
+	/**
 	 * Default settings for a brand-new mosaic. Kept intentionally close
 	 * in shape to campaign.settings so Image_Optimizer can be reused
 	 * without a different call path.
@@ -30,6 +56,10 @@ final class Mosaic_Repository {
 	 */
 	public static function default_settings(): array {
 		return [
+			// Preset drives col_span/row_span per item. "hero-top" is the
+			// safest default — first item goes full-width, rest are 1x1.
+			// Always produces a clean grid with no holes.
+			'layout'                  => self::LAYOUT_HERO_TOP,
 			'cols_desktop'            => 3,
 			'cols_mobile'             => 2,
 			'gap'                     => 12,
@@ -48,6 +78,9 @@ final class Mosaic_Repository {
 		$defaults = self::default_settings();
 		$input    = is_array( $input ) ? $input : [];
 		$out      = [];
+
+		$layout         = isset( $input['layout'] ) ? sanitize_key( (string) $input['layout'] ) : $defaults['layout'];
+		$out['layout']  = in_array( $layout, self::ALLOWED_LAYOUTS, true ) ? $layout : $defaults['layout'];
 
 		$out['cols_desktop'] = max( 1, min( 6, (int) ( $input['cols_desktop'] ?? $defaults['cols_desktop'] ) ) );
 		$out['cols_mobile']  = max( 1, min( 4, (int) ( $input['cols_mobile'] ?? $defaults['cols_mobile'] ) ) );
