@@ -313,6 +313,20 @@
 	contain: layout paint;
 }
 
+/* Layout presets: the renderer computes spans from item position, so
+ * the grid never ends up with leftover holes. `dense` auto-flow lets
+ * small cells slot into any gap a featured cell might leave behind
+ * (the `featured-*` presets depend on this). `custom` keeps the
+ * classic row-flow so power users stay in control of placement. */
+.usc-mosaic--layout-hero-top,
+.usc-mosaic--layout-hero-bottom,
+.usc-mosaic--layout-featured-left,
+.usc-mosaic--layout-featured-right,
+.usc-mosaic--layout-alternating,
+.usc-mosaic--layout-uniform {
+	grid-auto-flow: dense;
+}
+
 .usc-mosaic *,
 .usc-mosaic *::before,
 .usc-mosaic *::after {

@@ -73,34 +73,106 @@ final class Mosaic_Renderer {
 		}
 		unset( $item );
 
+		$layout = isset( $settings['layout'] ) ? (string) $settings['layout'] : 'hero-top';
+		$cols   = (int) $settings['cols_desktop'];
+		$total  = count( $items );
+
 		$dom_id = 'usc-mosaic-' . sanitize_html_class( $mosaic['slug'] ) . '-' . substr( wp_generate_uuid4(), 0, 8 );
 
 		$style_parts = [
-			'--usc-cols:' . (int) $settings['cols_desktop'],
+			'--usc-cols:' . $cols,
 			'--usc-cols-m:' . (int) $settings['cols_mobile'],
 			'--usc-gap:' . (int) $settings['gap'] . 'px',
 			'--usc-radius:' . (int) $settings['border_radius'] . 'px',
 		];
 		$style_attr = esc_attr( implode( ';', $style_parts ) );
 
+		// Non-custom presets use `grid-auto-flow: dense` so small cells
+		// can pack into holes left by big cells (featured-right etc.).
+		// The --layout-* modifier class switches that on in CSS.
+		$classes = [ 'usc-mosaic', 'usc-mosaic--layout-' . sanitize_html_class( $layout ) ];
+
 		ob_start();
 		?>
 <section
 	id="<?php echo esc_attr( $dom_id ); ?>"
-	class="usc-mosaic"
+	class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>"
 	data-usc-mosaic
+	data-usc-layout="<?php echo esc_attr( $layout ); ?>"
 	style="<?php echo $style_attr; ?>"
 	aria-label="<?php echo esc_attr( $mosaic['name'] ); ?>"
 >
 	<?php foreach ( $items as $index => $item ) : ?>
-		<?php echo self::render_item( $item, $index ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<?php echo self::render_item( $item, $index, $total, $layout, $cols ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 	<?php endforeach; ?>
 </section>
 		<?php
 		return (string) ob_get_clean();
 	}
 
-	private static function render_item( array $item, int $index ): string {
+	/**
+	 * Map a cell's position → (col_span, row_span) for the active layout
+	 * preset. For `custom` we read the user-configured spans off the item.
+	 *
+	 * Every preset is designed to produce a clean grid (no holes) when
+	 * paired with `grid-auto-flow: dense` on the container, regardless
+	 * of how many items the user adds.
+	 *
+	 * @param array<string,mixed> $item
+	 * @return array{col_span:int,row_span:int}
+	 */
+	public static function resolve_spans( array $item, int $index, int $total, string $layout, int $cols ): array {
+		$cols = max( 1, $cols );
+
+		switch ( $layout ) {
+			case 'hero-top':
+				return 0 === $index
+					? [ 'col_span' => $cols, 'row_span' => 1 ]
+					: [ 'col_span' => 1, 'row_span' => 1 ];
+
+			case 'hero-bottom':
+				return ( $index === $total - 1 )
+					? [ 'col_span' => $cols, 'row_span' => 1 ]
+					: [ 'col_span' => 1, 'row_span' => 1 ];
+
+			case 'featured-left':
+				// 2x2 featured cell at the start. Degrades to 1x1 if the
+				// grid is too narrow to fit it (cols < 2).
+				if ( $cols < 2 ) {
+					return [ 'col_span' => 1, 'row_span' => 1 ];
+				}
+				return 0 === $index
+					? [ 'col_span' => 2, 'row_span' => 2 ]
+					: [ 'col_span' => 1, 'row_span' => 1 ];
+
+			case 'featured-right':
+				if ( $cols < 2 ) {
+					return [ 'col_span' => 1, 'row_span' => 1 ];
+				}
+				return ( $index === $total - 1 )
+					? [ 'col_span' => 2, 'row_span' => 2 ]
+					: [ 'col_span' => 1, 'row_span' => 1 ];
+
+			case 'alternating':
+				// Hero, small, small, hero, small, small… — every third
+				// item becomes a full-width band, the others are 1x1.
+				return ( 0 === $index % 3 )
+					? [ 'col_span' => $cols, 'row_span' => 1 ]
+					: [ 'col_span' => 1, 'row_span' => 1 ];
+
+			case 'uniform':
+				return [ 'col_span' => 1, 'row_span' => 1 ];
+
+			case 'custom':
+			default:
+				return [
+					'col_span' => max( 1, (int) ( $item['col_span'] ?? 1 ) ),
+					'row_span' => max( 1, (int) ( $item['row_span'] ?? 1 ) ),
+				];
+		}
+	}
+
+	private static function render_item( array $item, int $index, int $total = 1, string $layout = 'custom', int $cols = 3 ): string {
 		$image = $item['image'];
 		if ( ! $image ) {
 			return '';
@@ -150,10 +222,14 @@ final class Mosaic_Renderer {
 			? 'auto'
 			: str_replace( '/', ' / ', (string) $item['aspect_ratio'] );
 
+		// Spans come from the active layout preset. `custom` falls back
+		// to the item's stored col_span / row_span for backwards compat.
+		$spans = self::resolve_spans( $item, $index, $total, $layout, $cols );
+
 		$cell_style = sprintf(
 			'--span-col:%d;--span-row:%d;--aspect:%s;',
-			(int) $item['col_span'],
-			(int) $item['row_span'],
+			$spans['col_span'],
+			$spans['row_span'],
 			esc_attr( $aspect_css )
 		);
 
