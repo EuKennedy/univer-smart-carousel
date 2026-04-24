@@ -70,3 +70,26 @@ export const Banners = {
 	remove: (bid) => request(`/banners/${bid}`, { method: 'DELETE' }),
 	duplicate: (bid) => request(`/banners/${bid}/duplicate`, { method: 'POST' }),
 };
+
+export const Mosaics = {
+	list: (params = {}) => {
+		const qs = new URLSearchParams();
+		if (params.search) qs.set('search', params.search);
+		if (params.status) qs.set('status', params.status);
+		const suffix = qs.toString() ? `?${qs.toString()}` : '';
+		return request(`/mosaics${suffix}`);
+	},
+	get: (id) => request(`/mosaics/${id}`),
+	create: (data) => request('/mosaics', { method: 'POST', data }),
+	update: (id, data) => request(`/mosaics/${id}`, { method: 'PUT', data }),
+	remove: (id) => request(`/mosaics/${id}`, { method: 'DELETE' }),
+	addItem: (id, data) => request(`/mosaics/${id}/items`, { method: 'POST', data }),
+	reorderItems: (id, data) =>
+		request(`/mosaics/${id}/items/reorder`, { method: 'POST', data }),
+};
+
+export const MosaicItems = {
+	update: (id, data) => request(`/mosaic-items/${id}`, { method: 'PUT', data }),
+	remove: (id) => request(`/mosaic-items/${id}`, { method: 'DELETE' }),
+	duplicate: (id) => request(`/mosaic-items/${id}/duplicate`, { method: 'POST' }),
+};

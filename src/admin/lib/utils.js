@@ -67,6 +67,30 @@ export function defaultSettings() {
 	};
 }
 
+export function defaultMosaicSettings() {
+	return {
+		cols_desktop: 3,
+		cols_mobile: 2,
+		gap: 12,
+		border_radius: 12,
+		image_optimization: true,
+		image_quality: 82,
+		image_webp: true,
+		image_max_width_desktop: 1600,
+		image_max_width_mobile: 750,
+	};
+}
+
+export function emptyMosaic() {
+	return {
+		name: '',
+		slug: '',
+		status: 'draft',
+		settings: defaultMosaicSettings(),
+		items: [],
+	};
+}
+
 export function emptyCampaign() {
 	return {
 		name: '',

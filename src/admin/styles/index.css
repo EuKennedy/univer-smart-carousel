@@ -483,6 +483,29 @@
 	gap: 12px;
 }
 
+.usc-row-3 {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 12px;
+}
+
+.usc-mosaic-items__head {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 16px;
+	margin-bottom: 16px;
+}
+
+.usc-mosaic-item-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
 .usc-field {
 	display: flex;
 	flex-direction: column;
