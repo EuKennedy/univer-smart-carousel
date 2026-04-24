@@ -54,14 +54,14 @@ If you're not on Elementor, the same principle applies: wrap each shortcode in a
 The plugin ships two independent rendering surfaces, each with its own admin tab and shortcode family:
 
 - **Carousels** (`[carouseldesktop_slug]` + `[carouselmobile_slug]`) — the horizontally-scrolling hero banners described above.
-- **Mosaics** (`[mosaic_slug]`) — a CSS Grid / bento layout for photo walls. Each item can have its own column + row span, so you can mix a big hero image with smaller side cards in the same grid. Mobile cap on columns is independent, so the layout reflows cleanly.
+- **Mosaics** (`[mosaic_slug]`) — a CSS Grid / bento layout for photo walls. Pick a **Format** (hero on top, featured on the left, uniform grid, alternating rhythm, or free-form) and the renderer handles the per-cell math for you. Mobile cap on columns is independent, so the layout reflows cleanly.
 
 Both surfaces reuse the same image optimization pipeline, the same API key infrastructure, and the same admin chrome. Pick whichever fits the spot you're filling.
 
 ## Features at a glance
 
 - **Three-level carousel model**: Carousel → Groups → Banners. Groups let you split a single carousel into sub-campaigns (Black Friday, Mother's Day) that you can pause/resume independently without losing banners.
-- **Bento mosaic model**: Mosaic → Items, each with `col_span` / `row_span` / per-item aspect ratio. One data model covers uniform grids and asymmetric "big hero + two side cards" compositions.
+- **Bento mosaic model**: Mosaic → Items, driven by a **Format preset** (hero on top, featured-left, alternating, uniform, …) that computes spans from item position — no more manual grid math. Free-form mode keeps per-item `col_span` / `row_span` for power users.
 - **Drag-to-reorder** groups and banners. Group-level and banner-level toggles to hide sub-campaigns or individual banners temporarily.
 - **Click the thumbnail to replace an image** — no delete-and-re-add cycle.
 - **Duplicate banners** in one click, handy for A/B-ish variants with different destination links.
