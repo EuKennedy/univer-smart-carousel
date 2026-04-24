@@ -44,6 +44,7 @@ export const Campaigns = {
 export const Settings = {
 	get: () => request('/settings'),
 	update: (data) => request('/settings', { method: 'PUT', data }),
+	flushCache: () => request('/cache/flush', { method: 'POST' }),
 };
 
 export const ApiKeys = {

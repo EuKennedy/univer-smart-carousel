@@ -20,6 +20,7 @@ export default function SettingsPage({ onSaved }) {
 	const [settings, setSettings] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
+	const [flushing, setFlushing] = useState(false);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -38,6 +39,21 @@ export default function SettingsPage({ onSaved }) {
 	}, [load]);
 
 	const setField = (patch) => setSettings((prev) => ({ ...prev, ...patch }));
+
+	const handleFlushCache = async () => {
+		setFlushing(true);
+		try {
+			await API.flushCache();
+			toast(
+				__('Every cache we could reach has been flushed.', 'univer-smart-carousel'),
+				'success'
+			);
+		} catch (err) {
+			toast(err?.message || __('Cache flush failed.', 'univer-smart-carousel'), 'error');
+		} finally {
+			setFlushing(false);
+		}
+	};
 
 	const handleSave = async () => {
 		setSaving(true);
@@ -101,6 +117,30 @@ export default function SettingsPage({ onSaved }) {
 						<p className="usc-muted">
 							{__(
 								'Reload the admin page after saving to see the new language take effect.',
+								'univer-smart-carousel'
+							)}
+						</p>
+					</div>
+				</Card>
+
+				<Card>
+					<SectionHeader
+						eyebrow={__('Performance', 'univer-smart-carousel')}
+						title={__('Cache', 'univer-smart-carousel')}
+						description={__(
+							'Every save already triggers an auto-purge of WP Rocket / LiteSpeed / W3 Total / SiteGround / NGINX / OPcache and every other cache plugin we can detect. Use this as a manual panic button if a CDN in front of WordPress is still serving stale HTML.',
+							'univer-smart-carousel'
+						)}
+					/>
+					<div className="usc-stack">
+						<div>
+							<Button variant="secondary" onClick={handleFlushCache} loading={flushing}>
+								{__('Flush every cache now', 'univer-smart-carousel')}
+							</Button>
+						</div>
+						<p className="usc-muted">
+							{__(
+								'External CDNs with API-based invalidation (like Cloudflare) need their own credentials — hook the `usc_cache_purge` action to wire them in.',
 								'univer-smart-carousel'
 							)}
 						</p>
