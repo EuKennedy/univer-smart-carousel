@@ -108,6 +108,34 @@ Base URL: `https://your-site.com/wp-json/usc/v1`
 | --- | --- | --- |
 | `*` | `/carousels/*` | Alias for `/campaigns/*` — same controller, same payloads. The product calls these "carousels"; the data layer kept the original "campaign" name for backwards compatibility. |
 
+### Mosaics
+
+Mosaics are photo grids / bento layouts, independent from carousels. Each item has its own `col_span` and `row_span` so you can mix uniform grids and asymmetric compositions in the same layout.
+
+| Method | Path | Scope | Description |
+| --- | --- | --- | --- |
+| GET    | `/mosaics` | read | List mosaics (search, status). |
+| POST   | `/mosaics` | write | Create. Body: mosaic fields. |
+| GET    | `/mosaics/{id}` | read | One mosaic with its items. |
+| PUT    | `/mosaics/{id}` | write | Partial update. |
+| DELETE | `/mosaics/{id}` | write | Delete + cascade items. |
+| GET    | `/mosaics/by-slug/{slug}` | read | Look up by slug. |
+| PUT    | `/mosaics/by-slug/{slug}` | write | Partial update by slug. |
+| DELETE | `/mosaics/by-slug/{slug}` | write | Delete by slug. |
+| POST   | `/mosaics/{id}/activate` | write | Set `status = active`. |
+| POST   | `/mosaics/{id}/deactivate` | write | Set `status = paused`. |
+
+### Mosaic items
+
+| Method | Path | Scope | Description |
+| --- | --- | --- | --- |
+| GET    | `/mosaics/{id}/items` | read | List items. |
+| POST   | `/mosaics/{id}/items` | write | Append. Body: `{ image_id, col_span?, row_span?, aspect_ratio?, link_url?, alt_text?, ... }`. |
+| POST   | `/mosaics/{id}/items/reorder` | write | Bulk reorder. Body: `{ order: [id, id, ...] }`. |
+| PUT    | `/mosaic-items/{id}` | write | Partial — toggle `is_active`, change `name`, `image_id`, `link_url`, `link_target`, `alt_text`, `col_span`, `row_span`, `aspect_ratio`, `sort_order`. |
+| DELETE | `/mosaic-items/{id}` | write | Delete. |
+| POST   | `/mosaic-items/{id}/duplicate` | write | Clone into the same mosaic. |
+
 ### Settings
 
 | Method | Path | Scope | Description |

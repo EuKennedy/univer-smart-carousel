@@ -49,9 +49,19 @@ So:
 
 If you're not on Elementor, the same principle applies: wrap each shortcode in a container with your theme's responsive visibility utility (Astra, Bricks, Blocksy, Kadence all have equivalents), or add your own media queries around them.
 
+## Two surfaces: Carousels and Mosaics
+
+The plugin ships two independent rendering surfaces, each with its own admin tab and shortcode family:
+
+- **Carousels** (`[carouseldesktop_slug]` + `[carouselmobile_slug]`) — the horizontally-scrolling hero banners described above.
+- **Mosaics** (`[mosaic_slug]`) — a CSS Grid / bento layout for photo walls. Each item can have its own column + row span, so you can mix a big hero image with smaller side cards in the same grid. Mobile cap on columns is independent, so the layout reflows cleanly.
+
+Both surfaces reuse the same image optimization pipeline, the same API key infrastructure, and the same admin chrome. Pick whichever fits the spot you're filling.
+
 ## Features at a glance
 
-- **Three-level content model**: Carousel → Groups → Banners. Groups let you split a single carousel into sub-campaigns (Black Friday, Mother's Day) that you can pause/resume independently without losing banners.
+- **Three-level carousel model**: Carousel → Groups → Banners. Groups let you split a single carousel into sub-campaigns (Black Friday, Mother's Day) that you can pause/resume independently without losing banners.
+- **Bento mosaic model**: Mosaic → Items, each with `col_span` / `row_span` / per-item aspect ratio. One data model covers uniform grids and asymmetric "big hero + two side cards" compositions.
 - **Drag-to-reorder** groups and banners. Group-level and banner-level toggles to hide sub-campaigns or individual banners temporarily.
 - **Click the thumbnail to replace an image** — no delete-and-re-add cycle.
 - **Duplicate banners** in one click, handy for A/B-ish variants with different destination links.
@@ -134,11 +144,13 @@ Then drop the folder into `wp-content/plugins/` and activate.
 
 ## Database
 
-Four tables, created via `dbDelta` on activation. They survive deactivation — turn the plugin off and on, your carousels are still there.
+Six tables, created via `dbDelta` on activation. They survive deactivation — turn the plugin off and on, your content is still there.
 
 - `wp_usc_campaigns` — carousel metadata + JSON settings + scheduling window.
 - `wp_usc_banner_groups` — named groups inside a carousel, per device, with pause toggle.
 - `wp_usc_banners` — image, name, link, target, alt, order, active toggle.
+- `wp_usc_mosaics` — mosaic metadata + JSON settings (cols, gap, radius, image optimization).
+- `wp_usc_mosaic_items` — image, name, link, col_span, row_span, aspect_ratio, order, active toggle.
 - `wp_usc_api_keys` — hashed Bearer tokens (plain key never persisted).
 
 ## Working on it locally

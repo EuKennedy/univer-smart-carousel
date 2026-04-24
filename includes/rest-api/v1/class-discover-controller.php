@@ -69,18 +69,22 @@ final class Discover_Controller {
 			],
 
 			'concepts' => [
-				'carousel'  => 'Top-level container. The plugin internally calls this a "campaign" (and the original /campaigns endpoints still work) — both names address the same resource. Each carousel exposes two shortcodes — one for desktop, one for mobile.',
-				'group'     => 'A named bucket of banners inside a carousel. Scoped to a single device. Has its own is_active toggle so marketing can pause a sub-campaign without losing banners.',
-				'banner'    => 'One image inside a group. Has a destination URL, alt text, sort order within the group, and its own is_active toggle.',
-				'shortcode' => 'Two per carousel: [carouseldesktop_<slug>] and [carouselmobile_<slug>]. Render only while the carousel status === "active" AND the banner\'s group is active AND the banner itself is active.',
+				'carousel'     => 'Top-level container for banners. The plugin internally calls this a "campaign" (and the original /campaigns endpoints still work) — both names address the same resource. Each carousel exposes two shortcodes — one for desktop, one for mobile.',
+				'group'        => 'A named bucket of banners inside a carousel. Scoped to a single device. Has its own is_active toggle so marketing can pause a sub-campaign without losing banners.',
+				'banner'       => 'One image inside a group. Has a destination URL, alt text, sort order within the group, and its own is_active toggle.',
+				'mosaic'       => 'A photo grid / bento layout, independent from carousels. Items sit in a CSS Grid with per-item col_span / row_span, allowing uniform grids and asymmetric compositions from the same data model.',
+				'mosaic_item'  => 'One cell in a mosaic. Has image_id, link URL, alt text, col_span, row_span, aspect_ratio (auto / "16/9" / free-form "WxH"), sort_order, and is_active.',
+				'shortcode'    => 'Carousels emit [carouseldesktop_<slug>] and [carouselmobile_<slug>]. Mosaics emit a single [mosaic_<slug>] — the responsive behavior is baked in through cols_desktop / cols_mobile CSS custom properties.',
 			],
 
 			'models' => [
-				'campaign' => $this->describe_campaign(),
-				'group'    => $this->describe_group(),
-				'banner'   => $this->describe_banner(),
-				'settings' => $this->describe_settings(),
-				'api_key'  => $this->describe_api_key(),
+				'campaign'    => $this->describe_campaign(),
+				'group'       => $this->describe_group(),
+				'banner'      => $this->describe_banner(),
+				'mosaic'      => $this->describe_mosaic(),
+				'mosaic_item' => $this->describe_mosaic_item(),
+				'settings'    => $this->describe_settings(),
+				'api_key'     => $this->describe_api_key(),
 			],
 
 			'endpoints' => $this->describe_endpoints( $base_url ),
@@ -220,6 +224,46 @@ final class Discover_Controller {
 				'created_at'   => [ 'type' => 'datetime', 'readonly' => true ],
 			],
 			'note' => 'The plain key value is returned ONLY in the create response and is not recoverable afterwards.',
+		];
+	}
+
+	private function describe_mosaic(): array {
+		return [
+			'description' => 'A photo grid / bento-style layout. Independent from carousels. Items sit in a CSS Grid with per-item col/row spans.',
+			'fields'      => [
+				'id'         => [ 'type' => 'integer', 'readonly' => true ],
+				'name'       => [ 'type' => 'string', 'required' => true, 'example' => 'Home destaques' ],
+				'slug'       => [ 'type' => 'string', 'pattern' => 'a-z0-9-', 'note' => 'Auto-generated from name if omitted.' ],
+				'status'     => [ 'type' => 'enum', 'values' => [ 'draft', 'active', 'paused' ], 'default' => 'draft' ],
+				'settings'   => [ 'type' => 'object', 'shape' => '{ cols_desktop (1-6), cols_mobile (1-4), gap, border_radius, image_optimization, image_quality (40-95), image_webp, image_max_width_desktop, image_max_width_mobile }' ],
+				'items'      => [ 'type' => 'array<mosaic_item>', 'note' => 'Returned on detail / by-slug; omitted from list endpoint.' ],
+				'shortcode'  => [ 'type' => 'string', 'readonly' => true, 'example' => '[mosaic_home-destaques]' ],
+				'created_at' => [ 'type' => 'datetime', 'readonly' => true ],
+				'updated_at' => [ 'type' => 'datetime', 'readonly' => true ],
+			],
+		];
+	}
+
+	private function describe_mosaic_item(): array {
+		return [
+			'description' => 'One cell in a mosaic.',
+			'fields' => [
+				'id'           => [ 'type' => 'integer', 'readonly' => true ],
+				'mosaic_id'    => [ 'type' => 'integer', 'readonly' => true ],
+				'image_id'     => [ 'type' => 'integer', 'required' => true, 'note' => 'WP attachment ID. PUT swaps the image in place.' ],
+				'image'        => [ 'type' => 'object', 'readonly' => true, 'shape' => '{ id, url, width, height, srcset, sizes, alt, webp_url, webp_srcset }' ],
+				'name'         => [ 'type' => 'string|null', 'note' => 'Internal admin-facing label. Empty string clears it.' ],
+				'link_url'     => [ 'type' => 'url|null' ],
+				'link_target'  => [ 'type' => 'enum', 'values' => [ '_self', '_blank' ], 'default' => '_self' ],
+				'link_rel'     => [ 'type' => 'string|null' ],
+				'alt_text'     => [ 'type' => 'string|null' ],
+				'col_span'     => [ 'type' => 'integer', 'min' => 1, 'max' => 6, 'default' => 1, 'note' => 'How many columns this cell spans. Capped to cols on narrow viewports.' ],
+				'row_span'     => [ 'type' => 'integer', 'min' => 1, 'max' => 6, 'default' => 1 ],
+				'aspect_ratio' => [ 'type' => 'string', 'examples' => [ 'auto', '1/1', '4/5', '16/9', '1560x1080' ], 'default' => 'auto' ],
+				'sort_order'   => [ 'type' => 'integer', 'note' => 'Order within the mosaic. Auto-assigned on append; POST /mosaics/{id}/items/reorder to move.' ],
+				'is_active'    => [ 'type' => 'boolean', 'default' => true ],
+				'created_at'   => [ 'type' => 'datetime', 'readonly' => true ],
+			],
 		];
 	}
 
@@ -420,6 +464,120 @@ final class Discover_Controller {
 				'path'     => '/settings',
 				'auth'     => 'write',
 				'summary'  => 'Partial update of plugin-wide settings.',
+			],
+
+			// Mosaics — primary CRUD
+			[
+				'method'   => 'GET',
+				'path'     => '/mosaics',
+				'auth'     => 'read',
+				'summary'  => 'List mosaics. Supports ?search and ?status filters.',
+				'returns'  => 'array<mosaic>',
+			],
+			[
+				'method'   => 'POST',
+				'path'     => '/mosaics',
+				'auth'     => 'write',
+				'summary'  => 'Create a mosaic. Body: mosaic fields (name required).',
+				'returns'  => 'mosaic',
+			],
+			[
+				'method'   => 'GET',
+				'path'     => '/mosaics/{id}',
+				'auth'     => 'read',
+				'summary'  => 'Get one mosaic with its items.',
+				'returns'  => 'mosaic',
+			],
+			[
+				'method'   => 'PUT',
+				'path'     => '/mosaics/{id}',
+				'auth'     => 'write',
+				'summary'  => 'Partial update — fields you omit are preserved.',
+				'returns'  => 'mosaic',
+			],
+			[
+				'method'   => 'DELETE',
+				'path'     => '/mosaics/{id}',
+				'auth'     => 'write',
+				'summary'  => 'Delete mosaic and all its items.',
+			],
+
+			// Mosaics — verbose / AI-friendly
+			[
+				'method'   => 'GET',
+				'path'     => '/mosaics/by-slug/{slug}',
+				'auth'     => 'read',
+				'summary'  => 'Look up by slug.',
+				'returns'  => 'mosaic',
+			],
+			[
+				'method'   => 'PUT',
+				'path'     => '/mosaics/by-slug/{slug}',
+				'auth'     => 'write',
+				'summary'  => 'Partial update by slug.',
+				'returns'  => 'mosaic',
+			],
+			[
+				'method'   => 'DELETE',
+				'path'     => '/mosaics/by-slug/{slug}',
+				'auth'     => 'write',
+				'summary'  => 'Delete by slug.',
+			],
+			[
+				'method'   => 'POST',
+				'path'     => '/mosaics/{id}/activate',
+				'auth'     => 'write',
+				'summary'  => 'Set status = active.',
+				'returns'  => 'mosaic',
+			],
+			[
+				'method'   => 'POST',
+				'path'     => '/mosaics/{id}/deactivate',
+				'auth'     => 'write',
+				'summary'  => 'Set status = paused.',
+				'returns'  => 'mosaic',
+			],
+
+			// Mosaic items
+			[
+				'method'   => 'GET',
+				'path'     => '/mosaics/{id}/items',
+				'auth'     => 'read',
+				'summary'  => 'List items in a mosaic.',
+				'returns'  => 'array<mosaic_item>',
+			],
+			[
+				'method'   => 'POST',
+				'path'     => '/mosaics/{id}/items',
+				'auth'     => 'write',
+				'summary'  => 'Append an item. Body: item fields (image_id required).',
+				'returns'  => 'mosaic',
+			],
+			[
+				'method'   => 'POST',
+				'path'     => '/mosaics/{id}/items/reorder',
+				'auth'     => 'write',
+				'summary'  => 'Bulk reorder. Body: { order: [item_id, item_id, ...] }.',
+				'returns'  => 'mosaic',
+			],
+			[
+				'method'   => 'PUT',
+				'path'     => '/mosaic-items/{id}',
+				'auth'     => 'write',
+				'summary'  => 'Partial update — toggle is_active, change name, image_id, link, target, alt, col_span, row_span, aspect_ratio, sort_order.',
+			],
+			[
+				'method'   => 'DELETE',
+				'path'     => '/mosaic-items/{id}',
+				'auth'     => 'write',
+				'summary'  => 'Delete a single item.',
+			],
+			[
+				'method'   => 'POST',
+				'path'     => '/mosaic-items/{id}/duplicate',
+				'auth'     => 'write',
+				'summary'  => 'Clone into the same mosaic. Name gets " (copy)" if set.',
+				'returns'  => '{ duplicated: true, id: number, source_id: number }',
 			],
 
 			// Aliases
