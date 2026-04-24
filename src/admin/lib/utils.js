@@ -69,6 +69,10 @@ export function defaultSettings() {
 
 export function defaultMosaicSettings() {
 	return {
+		// Preset drives per-cell spans from position. "hero-top" is the
+		// cleanest default — big banner on top, equal cards below. See
+		// Mosaic_Renderer::resolve_spans() for the full preset list.
+		layout: 'hero-top',
 		cols_desktop: 3,
 		cols_mobile: 2,
 		gap: 12,

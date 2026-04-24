@@ -55,6 +55,47 @@ const TARGET_OPTIONS = [
 
 const SPAN_OPTIONS = [1, 2, 3, 4, 5, 6].map((n) => ({ value: String(n), label: String(n) }));
 
+// Layout presets. Each entry maps to Mosaic_Repository::LAYOUT_* in PHP
+// and drives how the renderer computes per-cell col_span/row_span from
+// item position. `custom` is the escape hatch that keeps manual spans.
+const LAYOUT_OPTIONS = [
+	{
+		value: 'hero-top',
+		label: __('Hero on top', 'univer-smart-carousel'),
+		hint: __('First item full-width, the rest are equal cards below.', 'univer-smart-carousel'),
+	},
+	{
+		value: 'hero-bottom',
+		label: __('Hero at the bottom', 'univer-smart-carousel'),
+		hint: __('Equal cards on top, the last item takes the full bottom row.', 'univer-smart-carousel'),
+	},
+	{
+		value: 'featured-left',
+		label: __('Featured on the left', 'univer-smart-carousel'),
+		hint: __('First item is a 2×2 feature, the rest stack on the right.', 'univer-smart-carousel'),
+	},
+	{
+		value: 'featured-right',
+		label: __('Featured on the right', 'univer-smart-carousel'),
+		hint: __('Last item is a 2×2 feature, the rest stack on the left.', 'univer-smart-carousel'),
+	},
+	{
+		value: 'alternating',
+		label: __('Alternating rhythm', 'univer-smart-carousel'),
+		hint: __('Full-width band, then two small cards, repeating.', 'univer-smart-carousel'),
+	},
+	{
+		value: 'uniform',
+		label: __('Uniform grid', 'univer-smart-carousel'),
+		hint: __('Every cell is the same size — like an Instagram grid.', 'univer-smart-carousel'),
+	},
+	{
+		value: 'custom',
+		label: __('Free (manual)', 'univer-smart-carousel'),
+		hint: __('Set col / row span on every item yourself.', 'univer-smart-carousel'),
+	},
+];
+
 const ASPECT_PRESETS = [
 	{ value: 'auto', label: 'Auto' },
 	{ value: '1/1', label: '1:1' },
@@ -369,6 +410,7 @@ function MosaicEditor({ mosaic, onChange, onSave, onDelete, saving }) {
 							onItemsChange={(items) => onChange({ ...mosaic, items })}
 							onRefresh={refreshFromServer}
 							cols={settings.cols_desktop}
+							layout={settings.layout || 'hero-top'}
 						/>
 					</Card>
 				</div>
@@ -429,6 +471,16 @@ function MosaicEditor({ mosaic, onChange, onSave, onDelete, saving }) {
 					<Card>
 						<SectionHeader title={__('Layout', 'univer-smart-carousel')} />
 						<div className="usc-stack">
+							<Select
+								label={__('Format', 'univer-smart-carousel')}
+								hint={
+									LAYOUT_OPTIONS.find((o) => o.value === (settings.layout || 'hero-top'))
+										?.hint
+								}
+								options={LAYOUT_OPTIONS.map(({ value, label }) => ({ value, label }))}
+								value={settings.layout || 'hero-top'}
+								onChange={(v) => setSetting({ layout: v })}
+							/>
 							<div className="usc-row-2">
 								<Select
 									label={__('Columns (desktop)', 'univer-smart-carousel')}
@@ -573,7 +625,8 @@ function MosaicEditor({ mosaic, onChange, onSave, onDelete, saving }) {
  * Items manager (drag + reorder + replace + duplicate)
  * ============================================================ */
 
-function MosaicItemsManager({ mosaicId, items, onItemsChange, onRefresh, cols }) {
+function MosaicItemsManager({ mosaicId, items, onItemsChange, onRefresh, cols, layout = 'hero-top' }) {
+	const isCustomLayout = layout === 'custom';
 	const [dragItem, setDragItem] = useState(null);
 	const [dropTargetId, setDropTargetId] = useState(null);
 	const [confirmDelete, setConfirmDelete] = useState(null);
@@ -742,10 +795,15 @@ function MosaicItemsManager({ mosaicId, items, onItemsChange, onRefresh, cols })
 				<div>
 					<h3 className="usc-h3">{__('Items', 'univer-smart-carousel')}</h3>
 					<p className="usc-muted">
-						{__(
-							'Drag to reorder. Click a thumbnail to replace the image. Use Col / Row to make a cell bigger (bento layout).',
-							'univer-smart-carousel'
-						)}
+						{isCustomLayout
+							? __(
+									'Drag to reorder. Click a thumbnail to replace the image. Use Col / Row to make a cell bigger (bento layout).',
+									'univer-smart-carousel'
+							  )
+							: __(
+									'Drag to reorder. Click a thumbnail to replace the image. The chosen Format handles sizes for you.',
+									'univer-smart-carousel'
+							  )}
 					</p>
 				</div>
 				<Button variant="primary" onClick={onAddItems}>
@@ -845,30 +903,39 @@ function MosaicItemsManager({ mosaicId, items, onItemsChange, onRefresh, cols })
 									onChange={(e) => onUpdateField(item, { alt_text: e.target.value })}
 								/>
 							</div>
-							<div className="usc-row-3">
-								<Select
-									label={sprintf(
-										/* translators: %d: max columns */
-										__('Col span (1–%d)', 'univer-smart-carousel'),
-										cols || 3
-									)}
-									options={SPAN_OPTIONS}
-									value={String(item.col_span || 1)}
-									onChange={(v) => onUpdateField(item, { col_span: parseInt(v, 10) || 1 })}
-								/>
-								<Select
-									label={__('Row span', 'univer-smart-carousel')}
-									options={SPAN_OPTIONS}
-									value={String(item.row_span || 1)}
-									onChange={(v) => onUpdateField(item, { row_span: parseInt(v, 10) || 1 })}
-								/>
+							{isCustomLayout ? (
+								<div className="usc-row-3">
+									<Select
+										label={sprintf(
+											/* translators: %d: max columns */
+											__('Col span (1–%d)', 'univer-smart-carousel'),
+											cols || 3
+										)}
+										options={SPAN_OPTIONS}
+										value={String(item.col_span || 1)}
+										onChange={(v) => onUpdateField(item, { col_span: parseInt(v, 10) || 1 })}
+									/>
+									<Select
+										label={__('Row span', 'univer-smart-carousel')}
+										options={SPAN_OPTIONS}
+										value={String(item.row_span || 1)}
+										onChange={(v) => onUpdateField(item, { row_span: parseInt(v, 10) || 1 })}
+									/>
+									<Select
+										label={__('Aspect', 'univer-smart-carousel')}
+										options={ASPECT_PRESETS}
+										value={item.aspect_ratio || 'auto'}
+										onChange={(v) => onUpdateField(item, { aspect_ratio: v })}
+									/>
+								</div>
+							) : (
 								<Select
 									label={__('Aspect', 'univer-smart-carousel')}
 									options={ASPECT_PRESETS}
 									value={item.aspect_ratio || 'auto'}
 									onChange={(v) => onUpdateField(item, { aspect_ratio: v })}
 								/>
-							</div>
+							)}
 						</div>
 
 						<div className="usc-banner-card__actions">
