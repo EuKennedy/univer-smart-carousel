@@ -90,6 +90,14 @@ const LAYOUT_OPTIONS = [
 		hint: __('Images line up in equal-size cards, side by side — [] [] [].', 'univer-smart-carousel'),
 	},
 	{
+		value: 'aligned-row',
+		label: __('Aligned row (squares)', 'univer-smart-carousel'),
+		hint: __(
+			'Forces every card into a 1:1 square so the row stays perfectly aligned no matter what aspect the originals had.',
+			'univer-smart-carousel'
+		),
+	},
+	{
 		value: 'custom',
 		label: __('Free (manual)', 'univer-smart-carousel'),
 		hint: __('Set col / row span on every item yourself.', 'univer-smart-carousel'),

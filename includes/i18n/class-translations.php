@@ -297,6 +297,8 @@ final class Translations {
 			'Full-width band, then two small cards, repeating.' => 'Faixa em largura total, depois dois cards menores, repetindo.',
 			'Side by side'              => 'Lado a lado',
 			'Images line up in equal-size cards, side by side — [] [] [].' => 'As imagens ficam em cards iguais, lado a lado — [] [] [].',
+			'Aligned row (squares)'     => 'Em linha alinhada (quadrados)',
+			'Forces every card into a 1:1 square so the row stays perfectly aligned no matter what aspect the originals had.' => 'Força cada card a ser um quadrado 1:1, então a linha fica perfeitamente alinhada independente da proporção original das imagens.',
 			// Cache section
 			'Cache'                     => 'Cache',
 			'Every save already triggers an auto-purge of WP Rocket / LiteSpeed / W3 Total / SiteGround / NGINX / OPcache and every other cache plugin we can detect. Use this as a manual panic button if a CDN in front of WordPress is still serving stale HTML.' => 'Toda vez que você salva, o plugin já purga automaticamente WP Rocket / LiteSpeed / W3 Total / SiteGround / NGINX / OPcache e qualquer outro cache que ele detectar. Use o botão abaixo como pânico manual se algum CDN na frente do WordPress ainda estiver servindo HTML antigo.',
