@@ -173,6 +173,11 @@ final class Mosaic_Renderer {
 					: [ 'col_span' => 1, 'row_span' => 1 ];
 
 			case 'uniform':
+			case 'aligned-row':
+				// `aligned-row` shares uniform's span math (every cell
+				// is 1x1) and adds a CSS-level aspect lock applied via
+				// the section's `--*-aligned-row` modifier class —
+				// see src/frontend/index.css.
 				return [ 'col_span' => 1, 'row_span' => 1 ];
 
 			case 'custom':

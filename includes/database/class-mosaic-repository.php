@@ -35,6 +35,10 @@ final class Mosaic_Repository {
 	public const LAYOUT_FEATURED_RIGHT = 'featured-right';
 	public const LAYOUT_ALTERNATING    = 'alternating';
 	public const LAYOUT_UNIFORM        = 'uniform';
+	// Same 1x1 spans as uniform, plus a CSS-level aspect lock on
+	// every cell so cards stay perfectly aligned even when the
+	// underlying images have different aspect ratios.
+	public const LAYOUT_ALIGNED_ROW    = 'aligned-row';
 	public const LAYOUT_CUSTOM         = 'custom';
 
 	private const ALLOWED_LAYOUTS = [
@@ -44,6 +48,7 @@ final class Mosaic_Repository {
 		self::LAYOUT_FEATURED_RIGHT,
 		self::LAYOUT_ALTERNATING,
 		self::LAYOUT_UNIFORM,
+		self::LAYOUT_ALIGNED_ROW,
 		self::LAYOUT_CUSTOM,
 	];
 

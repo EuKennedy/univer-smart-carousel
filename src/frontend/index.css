@@ -324,8 +324,40 @@
 .usc-mosaic--d-featured-left,
 .usc-mosaic--d-featured-right,
 .usc-mosaic--d-alternating,
-.usc-mosaic--d-uniform {
+.usc-mosaic--d-uniform,
+.usc-mosaic--d-aligned-row {
 	grid-auto-flow: dense;
+}
+
+/* Aligned-row preset: every cell becomes a perfect square so cards
+ * line up cleanly side by side regardless of the source image's
+ * aspect ratio. The aspect lock has higher specificity than the
+ * default `--aspect` mechanism, so it wins for both auto-aspect
+ * and fixed-aspect items.
+ *
+ * Applied per-breakpoint via the `--d-` and `--m-` modifiers, so
+ * picking aligned-row only on desktop leaves mobile alone (and
+ * vice-versa).
+ */
+.usc-mosaic--d-aligned-row .usc-mosaic__item {
+	aspect-ratio: 1 / 1 !important;
+}
+.usc-mosaic--d-aligned-row .usc-mosaic__item::before {
+	display: none !important;
+}
+.usc-mosaic--d-aligned-row .usc-mosaic__item picture,
+.usc-mosaic--d-aligned-row .usc-mosaic__item .usc-mosaic__image {
+	position: absolute !important;
+	inset: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	max-width: none !important;
+	max-height: none !important;
+	object-fit: cover !important;
+	object-position: center center !important;
+	display: block !important;
+	margin: 0 !important;
+	padding: 0 !important;
 }
 
 .usc-mosaic *,
@@ -428,8 +460,33 @@ a.usc-mosaic__item:focus-visible .usc-mosaic__image {
 	.usc-mosaic--m-featured-left,
 	.usc-mosaic--m-featured-right,
 	.usc-mosaic--m-alternating,
-	.usc-mosaic--m-uniform {
+	.usc-mosaic--m-uniform,
+	.usc-mosaic--m-aligned-row {
 		grid-auto-flow: dense;
+	}
+
+	/* Mobile mirror of aligned-row's aspect lock. Same rules, scoped
+	 * by the --m- modifier so picking aligned-row only on mobile
+	 * doesn't bleed into the desktop layout. */
+	.usc-mosaic--m-aligned-row .usc-mosaic__item {
+		aspect-ratio: 1 / 1 !important;
+	}
+	.usc-mosaic--m-aligned-row .usc-mosaic__item::before {
+		display: none !important;
+	}
+	.usc-mosaic--m-aligned-row .usc-mosaic__item picture,
+	.usc-mosaic--m-aligned-row .usc-mosaic__item .usc-mosaic__image {
+		position: absolute !important;
+		inset: 0 !important;
+		width: 100% !important;
+		height: 100% !important;
+		max-width: none !important;
+		max-height: none !important;
+		object-fit: cover !important;
+		object-position: center center !important;
+		display: block !important;
+		margin: 0 !important;
+		padding: 0 !important;
 	}
 }
 
