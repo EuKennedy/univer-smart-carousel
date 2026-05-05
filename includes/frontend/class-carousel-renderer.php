@@ -35,18 +35,25 @@ final class Carousel_Renderer {
 	public static function render( array $campaign, string $device ): string {
 		$device = Campaign_Repository::sanitize_device( $device );
 
-		// Build the index of active groups for this device. Banners whose
-		// group is paused (or whose own is_active is false) are skipped.
+		// Build the index of active groups for this device + their
+		// per-group sort_order so the final banner list reflects both
+		// the user's group order AND the in-group reorder. The DB
+		// returns banners ordered by (sort_order ASC, id ASC) globally,
+		// which interleaves groups when sort_order overlaps. We have
+		// to sort explicitly here.
 		// Legacy banners with group_id = 0 (pre-1.2.0 migration not yet
 		// run) are kept active by default — fail open, never silent.
-		$groups = $campaign['groups'] ?? [];
-		$active_group_ids = [];
+		$groups            = $campaign['groups'] ?? [];
+		$active_group_ids  = [];
+		$group_sort_order  = [];
 		foreach ( $groups as $g ) {
 			if ( ( $g['device'] ?? '' ) !== $device ) {
 				continue;
 			}
+			$gid                       = (int) $g['id'];
+			$group_sort_order[ $gid ]  = (int) ( $g['sort_order'] ?? 0 );
 			if ( ! empty( $g['is_active'] ) ) {
-				$active_group_ids[ (int) $g['id'] ] = true;
+				$active_group_ids[ $gid ] = true;
 			}
 		}
 
@@ -70,6 +77,28 @@ final class Carousel_Renderer {
 		if ( empty( $banners ) ) {
 			return '';
 		}
+
+		// Sort by (group sort_order ASC, banner sort_order ASC, banner
+		// id ASC). This is what makes drag-to-reorder actually visible
+		// on the frontend when:
+		//   - Multiple groups exist (their banners would otherwise
+		//     interleave by overlapping sort_order values).
+		//   - Banners get reordered inside a group and the DB happens
+		//     to return them in insertion order on cached connections.
+		// Stable tiebreaker on id keeps sibling banners deterministic.
+		usort( $banners, static function ( $a, $b ) use ( $group_sort_order ) {
+			$ag = $group_sort_order[ (int) ( $a['group_id'] ?? 0 ) ] ?? 0;
+			$bg = $group_sort_order[ (int) ( $b['group_id'] ?? 0 ) ] ?? 0;
+			if ( $ag !== $bg ) {
+				return $ag <=> $bg;
+			}
+			$as = (int) ( $a['sort_order'] ?? 0 );
+			$bs = (int) ( $b['sort_order'] ?? 0 );
+			if ( $as !== $bs ) {
+				return $as <=> $bs;
+			}
+			return ( (int) $a['id'] ) <=> ( (int) $b['id'] );
+		} );
 
 		$settings    = $campaign['settings'];
 		$is_desktop  = Campaign_Repository::DEVICE_DESKTOP === $device;
