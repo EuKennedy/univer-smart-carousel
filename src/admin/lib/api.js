@@ -94,3 +94,9 @@ export const MosaicItems = {
 	remove: (id) => request(`/mosaic-items/${id}`, { method: 'DELETE' }),
 	duplicate: (id) => request(`/mosaic-items/${id}/duplicate`, { method: 'POST' }),
 };
+
+export const Badges = {
+	list: (taxonomy = 'pa_badge-ofertas') =>
+		request(`/badges?taxonomy=${encodeURIComponent(taxonomy)}`),
+	update: (termId, data) => request(`/badges/${termId}`, { method: 'PUT', data }),
+};

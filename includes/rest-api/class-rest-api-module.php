@@ -22,6 +22,7 @@ final class Rest_Api_Module {
 		( new V1\Discover_Controller() )->register_routes();
 		( new V1\Groups_Controller() )->register_routes();
 		( new V1\Banners_Controller() )->register_routes();
+		( new V1\Badges_Controller() )->register_routes();
 		( new V1\Mosaics_Controller() )->register_routes();
 		( new V1\Mosaic_Items_Controller() )->register_routes();
 
