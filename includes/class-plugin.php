@@ -64,9 +64,10 @@ final class Plugin {
 		$this->subsystems['auth']      = new Api\Api_Auth_Middleware();
 		$this->subsystems['admin']     = new Admin\Admin_Loader();
 		$this->subsystems['frontend']  = new Frontend\Frontend_Loader();
-		$this->subsystems['shortcode']       = new Shortcode\Shortcode_Handler();
-		$this->subsystems['mosaic_shortcode'] = new Shortcode\Mosaic_Shortcode_Handler();
-		$this->subsystems['rest']            = new Rest_Api\Rest_Api_Module();
+		$this->subsystems['shortcode']           = new Shortcode\Shortcode_Handler();
+		$this->subsystems['mosaic_shortcode']    = new Shortcode\Mosaic_Shortcode_Handler();
+		$this->subsystems['header_top_shortcode'] = new Shortcode\Header_Top_Shortcode_Handler();
+		$this->subsystems['rest']                = new Rest_Api\Rest_Api_Module();
 
 		load_plugin_textdomain( 'univer-smart-carousel', false, dirname( USC_PLUGIN_BASENAME ) . '/languages' );
 	}

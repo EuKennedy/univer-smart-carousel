@@ -25,6 +25,7 @@ final class Rest_Api_Module {
 		( new V1\Badges_Controller() )->register_routes();
 		( new V1\Mosaics_Controller() )->register_routes();
 		( new V1\Mosaic_Items_Controller() )->register_routes();
+		( new V1\Header_Top_Controller() )->register_routes();
 
 		// Friendly alias: /carousels mirrors /campaigns. The product calls
 		// them carousels in the UI; the data layer kept the original

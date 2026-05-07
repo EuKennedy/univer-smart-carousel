@@ -175,8 +175,57 @@ function init(el) {
 	updateProgress();
 }
 
+function initHeaderTop(el) {
+	if (el.__uscHtInit) return;
+	el.__uscHtInit = true;
+
+	const config = PARSE_CONFIG(el);
+	const viewport = el.querySelector('[data-usc-ht-viewport]');
+	const container = el.querySelector('[data-usc-ht-container]');
+	if (!viewport || !container) return;
+
+	const slides = Array.from(container.children);
+	if (slides.length === 0) return;
+
+	// Single slide: render static, no Embla — saves a few KB of work.
+	if (slides.length === 1) {
+		container.style.transform = 'none';
+		return;
+	}
+
+	// Reduced-motion users get a static first slide. Auto-rotation with
+	// no interaction trigger is exactly what prefers-reduced-motion is
+	// designed to suppress.
+	if (PREFERS_REDUCED_MOTION) {
+		container.style.transform = 'none';
+		return;
+	}
+
+	const autoplay = Autoplay({
+		delay: Math.max(1000, Number(config.autoplayDelay) || 4000),
+		stopOnInteraction: false,
+		stopOnMouseEnter: false,
+		stopOnFocusIn: false,
+	});
+
+	EmblaCarousel(
+		viewport,
+		{
+			loop: true,
+			axis: 'y',
+			align: 'start',
+			containScroll: false,
+			dragFree: false,
+			skipSnaps: false,
+			duration: Math.max(8, Math.min(60, Math.round((Number(config.transitionMs) || 600) / 20))),
+		},
+		[autoplay]
+	);
+}
+
 function bootAll() {
 	document.querySelectorAll('[data-usc-carousel]').forEach(init);
+	document.querySelectorAll('[data-usc-header-top]').forEach(initHeaderTop);
 }
 
 if (document.readyState === 'loading') {

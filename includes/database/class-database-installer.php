@@ -66,6 +66,14 @@ final class Database_Installer {
 	}
 
 	/**
+	 * Returns prefixed table name for the global Header Top swiper slides.
+	 */
+	public static function table_header_top_slides(): string {
+		global $wpdb;
+		return $wpdb->prefix . USC_TABLE_HEADER_TOP_SLIDES;
+	}
+
+	/**
 	 * Run on activation. Creates tables if missing, stores version.
 	 */
 	public static function install(): void {
@@ -311,11 +319,34 @@ final class Database_Installer {
 			KEY image_id (image_id)
 		) {$charset_collate};";
 
+		$header_top = self::table_header_top_slides();
+
+		// Header Top: a single, site-wide vertical swiper that lives at
+		// the very top of the page. One row per slide, no slugs — there
+		// is one global strip rendered by the [header_top] shortcode.
+		// Settings (autoplay delay, height, transition) live in
+		// wp_options under USC_OPTION_HEADER_TOP_SETTINGS, not here.
+		$sql_header_top = "CREATE TABLE {$header_top} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			image_id BIGINT UNSIGNED NOT NULL,
+			link_url VARCHAR(2048) NULL,
+			link_target VARCHAR(10) NOT NULL DEFAULT '_self',
+			link_rel VARCHAR(64) NULL,
+			alt_text VARCHAR(255) NULL,
+			sort_order INT NOT NULL DEFAULT 0,
+			is_active TINYINT(1) NOT NULL DEFAULT 1,
+			created_at DATETIME NULL DEFAULT NULL,
+			PRIMARY KEY  (id),
+			KEY sort (sort_order),
+			KEY image_id (image_id)
+		) {$charset_collate};";
+
 		dbDelta( $sql_campaigns );
 		dbDelta( $sql_banners );
 		dbDelta( $sql_api_keys );
 		dbDelta( $sql_banner_groups );
 		dbDelta( $sql_mosaics );
 		dbDelta( $sql_mosaic_items );
+		dbDelta( $sql_header_top );
 	}
 }

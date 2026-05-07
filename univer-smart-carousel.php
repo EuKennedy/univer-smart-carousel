@@ -3,7 +3,7 @@
  * Plugin Name:       Univer Smart Carousel
  * Plugin URI:        https://github.com/EuKennedy/univer-smart-carousel
  * Description:       Lightweight, premium, web-vitals-friendly banner carousel for WordPress and WooCommerce. Marketing teams create campaigns and ship banners with a single shortcode — desktop and mobile, fully separated.
- * Version:           1.8.6
+ * Version:           1.9.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Kennedy Rodrigues Gomes Teixeira
@@ -22,19 +22,21 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'USC_VERSION', '1.8.6' );
+define( 'USC_VERSION', '1.9.0' );
 define( 'USC_PLUGIN_FILE', __FILE__ );
 define( 'USC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'USC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'USC_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 define( 'USC_REST_NAMESPACE', 'usc/v1' );
-define( 'USC_DB_VERSION', '1.4.0' );
+define( 'USC_DB_VERSION', '1.5.0' );
 define( 'USC_TABLE_CAMPAIGNS', 'usc_campaigns' );
 define( 'USC_TABLE_BANNERS', 'usc_banners' );
 define( 'USC_TABLE_API_KEYS', 'usc_api_keys' );
 define( 'USC_TABLE_BANNER_GROUPS', 'usc_banner_groups' );
 define( 'USC_TABLE_MOSAICS', 'usc_mosaics' );
 define( 'USC_TABLE_MOSAIC_ITEMS', 'usc_mosaic_items' );
+define( 'USC_TABLE_HEADER_TOP_SLIDES', 'usc_header_top_slides' );
+define( 'USC_OPTION_HEADER_TOP_SETTINGS', 'usc_header_top_settings' );
 define( 'USC_TRANSIENT_MOSAIC_SLUGS', 'usc_mosaic_slugs_v1' );
 define( 'USC_CACHE_GROUP', 'usc_cache' );
 define( 'USC_TRANSIENT_SLUGS', 'usc_campaign_slugs_v1' );

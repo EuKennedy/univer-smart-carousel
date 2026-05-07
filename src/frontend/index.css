@@ -496,3 +496,69 @@ a.usc-mosaic__item:focus-visible .usc-mosaic__image {
 		transition: none;
 	}
 }
+
+/* ========================================================
+ * Header Top — global vertical-swiper announcement strip
+ * ======================================================== */
+
+.usc-header-top {
+	display: block;
+	width: 100%;
+	height: var(--usc-ht-height, 36px);
+	background: var(--usc-ht-bg, #000);
+	overflow: hidden;
+	position: relative;
+	box-sizing: border-box;
+	font-family: inherit;
+}
+
+.usc-header-top *,
+.usc-header-top *::before,
+.usc-header-top *::after {
+	box-sizing: border-box;
+}
+
+.usc-header-top__viewport {
+	overflow: hidden;
+	width: 100%;
+	height: 100%;
+}
+
+.usc-header-top__container {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	will-change: transform;
+}
+
+.usc-header-top__slide {
+	flex: 0 0 100%;
+	min-height: 0;
+	height: 100%;
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+}
+
+.usc-header-top__slide a {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	text-decoration: none;
+	color: inherit;
+}
+
+.usc-header-top__image {
+	display: block !important;
+	max-width: 100% !important;
+	max-height: 100% !important;
+	width: auto !important;
+	height: auto !important;
+	object-fit: contain !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}

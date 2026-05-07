@@ -100,3 +100,13 @@ export const Badges = {
 		request(`/badges?taxonomy=${encodeURIComponent(taxonomy)}`),
 	update: (termId, data) => request(`/badges/${termId}`, { method: 'PUT', data }),
 };
+
+export const HeaderTop = {
+	get: () => request('/header-top'),
+	updateSettings: (data) => request('/header-top/settings', { method: 'PUT', data }),
+	createSlide: (data) => request('/header-top/slides', { method: 'POST', data }),
+	updateSlide: (id, data) => request(`/header-top/slides/${id}`, { method: 'PUT', data }),
+	removeSlide: (id) => request(`/header-top/slides/${id}`, { method: 'DELETE' }),
+	duplicateSlide: (id) => request(`/header-top/slides/${id}/duplicate`, { method: 'POST' }),
+	reorder: (data) => request('/header-top/slides/reorder', { method: 'POST', data }),
+};

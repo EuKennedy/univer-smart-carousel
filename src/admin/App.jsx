@@ -11,6 +11,7 @@ import CampaignEditor from './components/CampaignEditor';
 import SettingsPage from './components/SettingsPage';
 import MosaicsPage from './components/MosaicsPage';
 import BadgesPage from './components/BadgesPage';
+import HeaderTopPage from './components/HeaderTopPage';
 import { ToastHost, EmptyState, Button, Spinner, toast } from './components/ui';
 import { Campaigns as API } from './lib/api';
 import { emptyCampaign, classNames } from './lib/utils';
@@ -18,6 +19,7 @@ import { emptyCampaign, classNames } from './lib/utils';
 const TAB_CAMPAIGNS = 'campaigns';
 const TAB_MOSAICS = 'mosaics';
 const TAB_BADGES = 'badges';
+const TAB_HEADER_TOP = 'header-top';
 const TAB_SETTINGS = 'settings';
 
 export default function App() {
@@ -147,6 +149,15 @@ export default function App() {
 					<button
 						type="button"
 						role="tab"
+						aria-selected={tab === TAB_HEADER_TOP}
+						className={classNames('usc-appbar__tab', tab === TAB_HEADER_TOP && 'is-active')}
+						onClick={() => setTab(TAB_HEADER_TOP)}
+					>
+						{__('Header Top', 'univer-smart-carousel')}
+					</button>
+					<button
+						type="button"
+						role="tab"
 						aria-selected={tab === TAB_SETTINGS}
 						className={classNames('usc-appbar__tab', tab === TAB_SETTINGS && 'is-active')}
 						onClick={() => setTab(TAB_SETTINGS)}
@@ -215,6 +226,8 @@ export default function App() {
 			{tab === TAB_MOSAICS && <MosaicsPage />}
 
 			{tab === TAB_BADGES && <BadgesPage />}
+
+			{tab === TAB_HEADER_TOP && <HeaderTopPage />}
 
 			{tab === TAB_SETTINGS && <SettingsPage />}
 

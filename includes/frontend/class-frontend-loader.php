@@ -40,20 +40,21 @@ final class Frontend_Loader {
 	}
 
 	public function maybe_enqueue(): void {
-		$carousel_used = Carousel_Renderer::is_in_use();
-		$mosaic_used   = Mosaic_Renderer::is_in_use();
+		$carousel_used   = Carousel_Renderer::is_in_use();
+		$mosaic_used     = Mosaic_Renderer::is_in_use();
+		$header_top_used = Header_Top_Renderer::is_in_use();
 
-		if ( ! $carousel_used && ! $mosaic_used ) {
+		if ( ! $carousel_used && ! $mosaic_used && ! $header_top_used ) {
 			return;
 		}
 
-		// CSS is shared: the same bundle holds carousel + mosaic styles
-		// (no point splitting a 4 KB file).
+		// CSS is shared: the same bundle holds carousel + mosaic +
+		// header-top styles (no point splitting a small file).
 		wp_enqueue_style( self::HANDLE_CSS );
 
-		// JS only ships when a carousel is on the page. Mosaics are
-		// pure CSS Grid — they don't need JavaScript to work.
-		if ( $carousel_used ) {
+		// JS ships when a carousel OR a header-top is on the page.
+		// Mosaics are pure CSS Grid — they don't need JavaScript.
+		if ( $carousel_used || $header_top_used ) {
 			wp_enqueue_script( self::HANDLE_JS );
 		}
 	}
