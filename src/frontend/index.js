@@ -179,17 +179,29 @@ function initHeaderTop(el) {
 	if (el.__uscHtInit) return;
 	el.__uscHtInit = true;
 
+	const markReady = () => el.classList.add('usc-ready');
+
 	const config = PARSE_CONFIG(el);
 	const viewport = el.querySelector('[data-usc-ht-viewport]');
 	const container = el.querySelector('[data-usc-ht-container]');
-	if (!viewport || !container) return;
+	if (!viewport || !container) {
+		// Mark ready anyway — the critical-CSS booting state should
+		// not stay glued to the section forever just because the JS
+		// found a malformed DOM.
+		markReady();
+		return;
+	}
 
 	const slides = Array.from(container.children);
-	if (slides.length === 0) return;
+	if (slides.length === 0) {
+		markReady();
+		return;
+	}
 
 	// Single slide: render static, no Embla — saves a few KB of work.
 	if (slides.length === 1) {
 		container.style.transform = 'none';
+		markReady();
 		return;
 	}
 
@@ -198,6 +210,7 @@ function initHeaderTop(el) {
 	// designed to suppress.
 	if (PREFERS_REDUCED_MOTION) {
 		container.style.transform = 'none';
+		markReady();
 		return;
 	}
 
@@ -221,6 +234,11 @@ function initHeaderTop(el) {
 		},
 		[autoplay]
 	);
+
+	// Embla finishes layout synchronously on construct, so flipping
+	// the class right after is safe — by the time the browser paints,
+	// the carousel is already wired and the booting rules are gone.
+	markReady();
 }
 
 function bootAll() {

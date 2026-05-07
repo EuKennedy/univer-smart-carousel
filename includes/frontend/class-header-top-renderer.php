@@ -20,7 +20,8 @@ defined( 'ABSPATH' ) || exit;
 
 final class Header_Top_Renderer {
 
-	private static bool $in_use = false;
+	private static bool $in_use            = false;
+	private static bool $critical_css_done = false;
 
 	public static function mark_in_use(): void {
 		self::$in_use = true;
@@ -28,6 +29,39 @@ final class Header_Top_Renderer {
 
 	public static function is_in_use(): bool {
 		return self::$in_use;
+	}
+
+	/**
+	 * Critical CSS shipped inline at render time so the strip clamps to
+	 * its configured height on the very first paint, before the main
+	 * stylesheet (enqueued in wp_footer) has a chance to load.
+	 *
+	 * Without this, the strip — being at the very top of the page —
+	 * renders raw HTML for a beat: every slide image stacked at its
+	 * intrinsic size, the section pushed to thousands of pixels tall,
+	 * and the rest of the page shoved down. Then the stylesheet kicks
+	 * in and everything snaps to 36px. Classic FOUC.
+	 *
+	 * The rules here only need to cover the booting state. The full
+	 * stylesheet still owns transitions, hover, etc. once it loads
+	 * and the JS adds `usc-ready`, after which these `:not(.usc-ready)`
+	 * selectors stop matching.
+	 */
+	private static function critical_css(): string {
+		if ( self::$critical_css_done ) {
+			return '';
+		}
+		self::$critical_css_done = true;
+		// Minified by hand. Targets only `.usc-header-top:not(.usc-ready)`
+		// so the live stylesheet wins once Embla finishes booting.
+		return '<style id="usc-header-top-critical">'
+			. '.usc-header-top{display:block;width:100%;height:var(--usc-ht-height,36px);background:var(--usc-ht-bg,#000);overflow:hidden;position:relative;box-sizing:border-box}'
+			. '.usc-header-top:not(.usc-ready) .usc-header-top__viewport{overflow:hidden;width:100%;height:100%}'
+			. '.usc-header-top:not(.usc-ready) .usc-header-top__container{display:block;height:100%;width:100%}'
+			. '.usc-header-top:not(.usc-ready) .usc-header-top__slide{display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:hidden}'
+			. '.usc-header-top:not(.usc-ready) .usc-header-top__slide:not(:first-child){display:none !important}'
+			. '.usc-header-top:not(.usc-ready) .usc-header-top__image{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}'
+			. '</style>';
 	}
 
 	/**
@@ -49,7 +83,10 @@ final class Header_Top_Renderer {
 		];
 		$style_attr = esc_attr( implode( ';', $style_parts ) );
 
+		$critical = self::critical_css();
+
 		ob_start();
+		echo $critical; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		?>
 <section
 	id="<?php echo esc_attr( $dom_id ); ?>"
