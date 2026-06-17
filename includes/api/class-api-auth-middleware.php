@@ -26,8 +26,6 @@ defined( 'ABSPATH' ) || exit;
 
 final class Api_Auth_Middleware {
 
-	private const NAMESPACE_PREFIX = '/wp-json/' . USC_REST_NAMESPACE;
-
 	/**
 	 * The currently-authenticated API key record (if any). Reset per request.
 	 *
@@ -153,8 +151,55 @@ final class Api_Auth_Middleware {
 	}
 
 	private static function is_usc_request(): bool {
+		// Only authenticate Bearer tokens while serving a REST request.
+		if ( ! ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+			return false;
+		}
+
+		$route = self::current_rest_route();
+		if ( '' === $route ) {
+			return false;
+		}
+
+		$namespace = '/' . trim( USC_REST_NAMESPACE, '/' );
+		return $route === $namespace || 0 === strpos( $route, $namespace . '/' );
+	}
+
+	private static function current_rest_route(): string {
 		$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
-		return false !== strpos( $uri, self::NAMESPACE_PREFIX );
+		if ( '' === $uri ) {
+			return '';
+		}
+
+		$path = wp_parse_url( $uri, PHP_URL_PATH );
+		if ( ! is_string( $path ) || '' === $path ) {
+			return '';
+		}
+
+		$rest_prefix = function_exists( 'rest_get_url_prefix' ) ? rest_get_url_prefix() : 'wp-json';
+		$needle      = '/' . trim( $rest_prefix, '/' ) . '/';
+		$offset      = strpos( $path, $needle );
+		
+		// If the request came via a pretty permalink REST route, that overrides the query parameter
+		if ( false !== $offset ) {
+			$route = substr( $path, $offset + strlen( $needle ) );
+			return self::normalize_route( $route );
+		}
+
+		// Fallback to query parameter if no pretty permalink was used
+		if ( isset( $_GET['rest_route'] ) ) {
+			return self::normalize_route( (string) wp_unslash( $_GET['rest_route'] ) );
+		}
+
+		return '';
+	}
+
+	private static function normalize_route( string $route ): string {
+		$route = trim( $route );
+		if ( '' === $route ) {
+			return '';
+		}
+		return '/' . ltrim( $route, '/' );
 	}
 
 	private static function extract_bearer_token(): ?string {
